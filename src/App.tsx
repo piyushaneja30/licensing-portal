@@ -1,17 +1,21 @@
 import React, { useMemo, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
-import { Provider } from 'react-redux';
-import { PersistGate } from 'redux-persist/integration/react';
-import { store, persistor } from './store/index';
+import { useSelector } from 'react-redux';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import DashboardLayout from './components/layout/DashboardLayout';
-import Dashboard from './components/dashboard/Dashboard';
-import EngineerInternForm from './components/forms/engineer-intern/EngineerInternForm';
+import Dashboard from './components/Dashboard';
+import ApplicationFlow from './components/application/ApplicationFlow';
+import ApplicationHistory from './components/application/ApplicationHistory';
 import LicenseSearch from './components/license/LicenseSearch';
-import { LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import Profile from './components/profile/Profile';
+import Settings from './components/settings/Settings';
+import HelpSupport from './components/help/HelpSupport';
+import MyLicenses from './components/license/MyLicenses';
+import { RootState } from './store';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -19,6 +23,7 @@ interface ProtectedRouteProps {
 
 const App = () => {
   const [mode, setMode] = useState<'light' | 'dark'>('light');
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
 
   const theme = useMemo(
     () =>
@@ -50,7 +55,6 @@ const App = () => {
   );
 
   const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-    const isAuthenticated = localStorage.getItem('token');
     return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
   };
 
@@ -61,8 +65,8 @@ const App = () => {
         <Router>
           <Routes>
             {/* Public routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
+            <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/dashboard" />} />
             
             {/* Protected routes */}
             <Route
@@ -72,9 +76,15 @@ const App = () => {
                   <DashboardLayout onToggleTheme={() => setMode(mode === 'light' ? 'dark' : 'light')} mode={mode}>
                     <Routes>
                       <Route path="/" element={<Navigate to="/dashboard" />} />
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/new-application" element={<EngineerInternForm />} />
+                      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                      <Route path="/new-application" element={<ApplicationFlow />} />
+                      <Route path="/history" element={<ApplicationHistory />} />
                       <Route path="/license-search" element={<LicenseSearch />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/support" element={<HelpSupport />} />
+                      <Route path="/licenses" element={<ProtectedRoute><MyLicenses /></ProtectedRoute>} />
+                      <Route path="*" element={<Navigate to="/dashboard" replace />} />
                     </Routes>
                   </DashboardLayout>
                 </ProtectedRoute>

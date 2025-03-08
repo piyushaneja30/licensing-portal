@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { REHYDRATE } from 'redux-persist';
 
 const initialState = {
   user: null,
@@ -17,6 +18,8 @@ const authSlice = createSlice({
     loginStart: (state) => {
       state.loading = true;
       state.error = null;
+      state.isAuthenticated = false;
+      state.mfaVerified = false;
     },
     loginSuccess: (state, action) => {
       state.loading = false;
@@ -25,16 +28,22 @@ const authSlice = createSlice({
       state.token = action.payload.token;
       state.mfaRequired = action.payload.mfaRequired;
       state.error = null;
+      state.mfaVerified = true;
     },
     loginFailure: (state, action) => {
       state.loading = false;
       state.error = action.payload;
+      state.isAuthenticated = false;
+      state.user = null;
+      state.token = null;
+      state.mfaVerified = false;
     },
     mfaVerified: (state) => {
       state.mfaVerified = true;
+      state.loading = false;
     },
     logout: (state) => {
-      return initialState;
+      return { ...initialState };
     },
     updateUser: (state, action) => {
       state.user = { ...state.user, ...action.payload };
@@ -45,7 +54,15 @@ const authSlice = createSlice({
     },
     clearError: (state) => {
       state.error = null;
+      state.loading = false;
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(REHYDRATE, (state) => {
+      // Reset critical states on rehydration
+      state.loading = false;
+      state.error = null;
+    });
   },
 });
 

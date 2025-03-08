@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -15,39 +15,79 @@ import {
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { loginStart, loginSuccess, loginFailure } from '../../store/slices/authSlice';
+import { loginStart, loginSuccess, loginFailure, clearError } from '../../store/slices/authSlice';
 
 const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error } = useSelector((state) => state.auth);
+  const { loading, error, isAuthenticated } = useSelector((state) => state.auth);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [showVerification, setShowVerification] = useState(false);
 
-  const handleLogin = (e) => {
+  // Clear any existing errors when component mounts
+  useEffect(() => {
+    dispatch(clearError());
+  }, [dispatch]);
+
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleLogin = async (e) => {
     e.preventDefault();
+    if (!email || !password) {
+      return;
+    }
     dispatch(loginStart());
-    // For testing, always show 2FA dialog
-    setShowVerification(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // For testing, always show 2FA dialog
+      setShowVerification(true);
+      dispatch(clearError()); // Clear loading state after showing dialog
+    } catch (err) {
+      dispatch(loginFailure(err.message || 'Login failed'));
+    }
   };
 
-  const handleVerification = () => {
-    if (verificationCode === '123456') {
-      // Successful verification
-      dispatch(loginSuccess({
-        user: {
-          email,
-          firstName: 'Test',
-          lastName: 'User',
-        },
-        token: 'test-token'
-      }));
-      navigate('/dashboard');
-    } else {
-      dispatch(loginFailure('Invalid verification code'));
+  const handleVerification = async () => {
+    if (!verificationCode) return;
+    
+    dispatch(loginStart());
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (verificationCode === '123456') {
+        dispatch(loginSuccess({
+          user: {
+            email,
+            firstName: 'Test',
+            lastName: 'User',
+          },
+          token: 'test-token',
+          mfaRequired: false
+        }));
+        setShowVerification(false);
+        navigate('/dashboard');
+      } else {
+        throw new Error('Invalid verification code');
+      }
+    } catch (err) {
+      dispatch(loginFailure(err.message || 'Verification failed'));
     }
+  };
+
+  const handleCloseVerification = () => {
+    if (loading) return;
+    setShowVerification(false);
+    setVerificationCode('');
+    dispatch(clearError());
   };
 
   return (
@@ -73,7 +113,7 @@ const Login = () => {
           Sign in to Licensing Portal
         </Typography>
 
-        {error && (
+        {error && !showVerification && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
@@ -90,6 +130,7 @@ const Login = () => {
             error={!email}
             helperText={!email && 'Required'}
             margin="normal"
+            disabled={loading || showVerification}
           />
           <TextField
             fullWidth
@@ -102,31 +143,36 @@ const Login = () => {
             error={!password}
             helperText={!password && 'Required'}
             margin="normal"
+            disabled={loading || showVerification}
           />
           <Button
             type="submit"
             fullWidth
             variant="contained"
             sx={{ mt: 3 }}
-            disabled={loading}
+            disabled={loading || !email || !password || showVerification}
           >
-            {loading ? <CircularProgress size={24} /> : 'Sign In'}
+            {loading && !showVerification ? <CircularProgress size={24} /> : 'Sign In'}
           </Button>
         </form>
 
         <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Link href="/forgot-password" variant="body2">
+          <Link component="button" variant="body2" onClick={() => navigate('/forgot-password')}>
             Forgot password?
           </Link>
         </Box>
         <Box sx={{ mt: 1, textAlign: 'center' }}>
-          <Link href="/register" variant="body2">
+          <Link component="button" variant="body2" onClick={() => navigate('/register')}>
             Don't have an account? Sign up
           </Link>
         </Box>
 
         {/* Verification Dialog */}
-        <Dialog open={showVerification} onClose={() => setShowVerification(false)}>
+        <Dialog 
+          open={showVerification} 
+          onClose={loading ? undefined : handleCloseVerification}
+          disableEscapeKeyDown={loading}
+        >
           <DialogTitle>Two-Factor Authentication</DialogTitle>
           <DialogContent>
             <Typography variant="body1" sx={{ mb: 2 }}>
@@ -142,12 +188,28 @@ const Login = () => {
               onChange={(e) => setVerificationCode(e.target.value)}
               error={!!error}
               helperText={error}
+              disabled={loading}
+              autoFocus
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && verificationCode) {
+                  handleVerification();
+                }
+              }}
             />
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setShowVerification(false)}>Cancel</Button>
-            <Button onClick={handleVerification} variant="contained">
-              Verify
+            <Button 
+              onClick={handleCloseVerification} 
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleVerification} 
+              variant="contained"
+              disabled={loading || !verificationCode}
+            >
+              {loading ? <CircularProgress size={24} /> : 'Verify'}
             </Button>
           </DialogActions>
         </Dialog>
