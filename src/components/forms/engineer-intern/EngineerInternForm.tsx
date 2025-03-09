@@ -7,8 +7,6 @@ import { Alert, Snackbar } from '@mui/material';
 import FormStepWrapper from '../FormStepWrapper';
 import PersonalInfoStep from './PersonalInfoStep';
 import EducationStep from './EducationStep';
-import DocumentsStep from './DocumentsStep';
-import ReviewStep from './ReviewStep';
 import { LICENSE_TYPES, LicenseApplication } from '../../../types/license';
 import { submitApplication } from '../../../store/slices/licenseSlice';
 import { RootState, AppDispatch } from '../../../store';
@@ -37,18 +35,10 @@ interface Education {
   gpa: string;
 }
 
-interface Document {
-  type: string;
-  name: string;
-  url: string;
-  uploadDate: string;
-  status: 'pending' | 'approved' | 'rejected';
-}
-
 interface FormData {
   personalInfo: PersonalInfo | null;
   education: { education: Education[] } | null;
-  documents: Document[] | null;
+  documents: LicenseApplication['documents'] | null;
 }
 
 const FORM_STEPS = [
@@ -71,16 +61,6 @@ const EngineerInternForm: React.FC = () => {
   const [showError, setShowError] = useState(false);
 
   const handleNext = () => {
-    // Only proceed if the current step has been completed
-    if (activeStep === 0 && !formData.personalInfo) {
-      setShowError(true);
-      return;
-    }
-    if (activeStep === 1 && !formData.education) {
-      setShowError(true);
-      return;
-    }
-    // Add validation for other steps as needed
     setActiveStep((prev) => prev + 1);
   };
 
@@ -88,10 +68,10 @@ const EngineerInternForm: React.FC = () => {
     setActiveStep((prev) => prev - 1);
   };
 
-  const handleStepSave = (step: keyof FormData, values: PersonalInfo | { education: Education[] } | Document[]) => {
+  const handleStepSave = (step: keyof FormData, data: any) => {
     setFormData((prev) => ({
       ...prev,
-      [step]: values,
+      [step]: data,
     }));
     handleNext();
   };
@@ -148,22 +128,7 @@ const EngineerInternForm: React.FC = () => {
             onSave={(values) => handleStepSave('education', values)}
           />
         );
-      case 2:
-        // Documents step
-        return (
-          <DocumentsStep
-            initialValues={formData.documents}
-            onSave={(values) => handleStepSave('documents', values)}
-          />
-        );
-      case 3:
-        // Review step
-        return (
-          <ReviewStep
-            formData={formData}
-            onEdit={(step: number) => setActiveStep(step)}
-          />
-        );
+      // Add more steps here
       default:
         return null;
     }
@@ -179,12 +144,7 @@ const EngineerInternForm: React.FC = () => {
         onBack={handleBack}
         onSubmit={handleSubmit}
         isLastStep={activeStep === FORM_STEPS.length - 1}
-        isValid={
-          activeStep === 0 ? !!formData.personalInfo :
-          activeStep === 1 ? !!formData.education :
-          activeStep === 2 ? !!formData.documents :
-          true
-        }
+        isValid={!loading}
         isSubmitting={loading}
       >
         {renderStep()}
@@ -197,7 +157,7 @@ const EngineerInternForm: React.FC = () => {
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert onClose={handleCloseError} severity="error">
-          {error || 'Please complete all required fields before proceeding.'}
+          {error || 'An error occurred while submitting your application. Please try again.'}
         </Alert>
       </Snackbar>
     </LocalizationProvider>

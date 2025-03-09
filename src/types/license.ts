@@ -153,21 +153,4 @@ export const LICENSE_TYPES: Record<string, LicenseType> = {
     renewalPeriod: 3,
   },
   // Add more license types as needed
-};
-
-export interface Address {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-}
-
-export interface PersonalInfo {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone?: string;
-    ssn?: string;
-    address: Address;
-} 
+}; 

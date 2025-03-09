@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { LicenseApplication, License, LicenseType } from '../../types/license';
-import { licenseTypeApi } from '../../services/api';
 
 interface LicenseState {
   applications: LicenseApplication[];
@@ -8,7 +7,6 @@ interface LicenseState {
   availableTypes: LicenseType[];
   loading: boolean;
   error: string | null;
-  licenseTypes: LicenseType[];
 }
 
 const initialState: LicenseState = {
@@ -17,39 +15,20 @@ const initialState: LicenseState = {
   availableTypes: [],
   loading: false,
   error: null,
-  licenseTypes: [],
 };
 
 // Async thunks for API calls
 export const fetchLicenseTypes = createAsyncThunk(
-  'license/fetchLicenseTypes',
-  async () => {
-    const response = await licenseTypeApi.getAll();
-    return response.data;
-  }
-);
-
-export const createLicenseType = createAsyncThunk(
-  'license/createLicenseType',
-  async (licenseType: Partial<LicenseType>) => {
-    const response = await licenseTypeApi.create(licenseType);
-    return response.data;
-  }
-);
-
-export const updateLicenseType = createAsyncThunk(
-  'license/updateLicenseType',
-  async ({ id, data }: { id: string; data: Partial<LicenseType> }) => {
-    await licenseTypeApi.update(id, data);
-    return { id, ...data };
-  }
-);
-
-export const deleteLicenseType = createAsyncThunk(
-  'license/deleteLicenseType',
-  async (id: string) => {
-    await licenseTypeApi.delete(id);
-    return id;
+  'license/fetchTypes',
+  async (_, { rejectWithValue }) => {
+    try {
+      // TODO: Replace with actual API call
+      const response = await fetch('/api/license-types');
+      const data = await response.json();
+      return data;
+    } catch (error: any) {
+      return rejectWithValue(error.message);
+    }
   }
 );
 
@@ -118,11 +97,11 @@ const licenseSlice = createSlice({
       })
       .addCase(fetchLicenseTypes.fulfilled, (state, action) => {
         state.loading = false;
-        state.licenseTypes = action.payload;
+        state.availableTypes = action.payload;
       })
       .addCase(fetchLicenseTypes.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Failed to fetch license types';
+        state.error = action.payload as string;
       })
       // Submit application
       .addCase(submitApplication.pending, (state) => {
@@ -162,21 +141,6 @@ const licenseSlice = createSlice({
       .addCase(fetchUserApplications.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
-      })
-      .addCase(createLicenseType.fulfilled, (state, action) => {
-        state.licenseTypes.push(action.payload);
-      })
-      .addCase(updateLicenseType.fulfilled, (state, action) => {
-        const index = state.licenseTypes.findIndex(lt => lt.id === action.payload.id);
-        if (index !== -1) {
-          state.licenseTypes[index] = {
-            ...state.licenseTypes[index],
-            ...action.payload
-          };
-        }
-      })
-      .addCase(deleteLicenseType.fulfilled, (state, action) => {
-        state.licenseTypes = state.licenseTypes.filter(lt => lt.id !== action.payload);
       });
   },
 });
