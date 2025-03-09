@@ -1,0 +1,6 @@
+@echo off
+echo Building the application...
+"C:\Program Files\Apache\maven\bin\mvn.cmd" clean install
+echo Starting the Spring Boot application...
+"C:\Program Files\Apache\maven\bin\mvn.cmd" spring-boot:run
+pause 
