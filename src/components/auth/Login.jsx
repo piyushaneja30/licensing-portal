@@ -64,13 +64,17 @@ const Login = () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       if (verificationCode === '123456') {
+        // Use a hardcoded token for testing
+        const token = 'test-token';
+        
         dispatch(loginSuccess({
           user: {
+            id: 'test-user-id',
             email,
             firstName: 'Test',
             lastName: 'User',
           },
-          token: 'test-token',
+          token,
           mfaRequired: false
         }));
         setShowVerification(false);

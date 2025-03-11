@@ -1,8 +1,13 @@
-const path = require('path');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
+import path from 'path';
+import HtmlWebpackPlugin from 'html-webpack-plugin';
+import ReactRefreshWebpackPlugin from '@pmmmwh/react-refresh-webpack-plugin';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-module.exports = {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+export default {
   mode: 'development',
   entry: './src/index.tsx',
   output: {
@@ -13,19 +18,34 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.[jt]sx?$/,
+        test: /\.(ts|tsx)$/,
+        exclude: /node_modules/,
+        use: [
+          {
+            loader: 'ts-loader',
+            options: {
+              transpileOnly: true,
+              compilerOptions: {
+                module: 'esnext',
+                moduleResolution: 'node',
+                jsx: 'react-jsx'
+              }
+            }
+          }
+        ]
+      },
+      {
+        test: /\.(js|jsx)$/,
         exclude: /node_modules/,
         use: {
           loader: 'babel-loader',
           options: {
             presets: [
               '@babel/preset-env',
-              ['@babel/preset-react', { runtime: 'automatic' }],
-              '@babel/preset-typescript',
-            ],
-            plugins: ['@babel/plugin-transform-runtime'],
-          },
-        },
+              ['@babel/preset-react', { runtime: 'automatic' }]
+            ]
+          }
+        }
       },
       {
         test: /\.css$/,
@@ -34,15 +54,15 @@ module.exports = {
     ],
   },
   resolve: {
-    extensions: ['.tsx', '.ts', '.js', '.jsx'],
+    extensions: ['.ts', '.tsx', '.js', '.jsx'],
     alias: {
       '@mui/styled-engine': '@mui/styled-engine-sc',
-      'ajv': path.resolve(__dirname, 'node_modules/ajv'),
-      'ajv-keywords': path.resolve(__dirname, 'node_modules/ajv-keywords'),
     },
     fallback: {
-      "react/jsx-runtime": "react/jsx-runtime.js",
-      "react/jsx-dev-runtime": "react/jsx-dev-runtime.js",
+      "crypto": "crypto-browserify",
+      "stream": "stream-browserify",
+      "util": "util/",
+      "buffer": "buffer/"
     },
   },
   plugins: [

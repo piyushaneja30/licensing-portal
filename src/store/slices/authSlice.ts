@@ -18,18 +18,24 @@ export interface User {
 
 export interface AuthState {
   user: User | null;
+  token: string | null;
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
+  mfaRequired: boolean;
+  mfaVerified: boolean;
   isVerificationRequired: boolean;
   verificationId: string | null;
 }
 
 const initialState: AuthState = {
   user: null,
+  token: null,
   isAuthenticated: false,
   loading: false,
   error: null,
+  mfaRequired: false,
+  mfaVerified: false,
   isVerificationRequired: false,
   verificationId: null,
 };
@@ -42,10 +48,11 @@ const authSlice = createSlice({
       state.loading = true;
       state.error = null;
     },
-    loginSuccess: (state, action: PayloadAction<{ user: User }>) => {
+    loginSuccess: (state, action: PayloadAction<{ user: User; token: string }>) => {
       state.loading = false;
       state.isAuthenticated = true;
       state.user = action.payload.user;
+      state.token = action.payload.token;
       state.error = null;
     },
     loginFailure: (state, action: PayloadAction<string>) => {
@@ -54,9 +61,12 @@ const authSlice = createSlice({
     },
     logout: (state) => {
       state.user = null;
+      state.token = null;
       state.isAuthenticated = false;
       state.loading = false;
       state.error = null;
+      state.mfaRequired = false;
+      state.mfaVerified = false;
       state.isVerificationRequired = false;
       state.verificationId = null;
     },

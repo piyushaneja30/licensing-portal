@@ -45,6 +45,7 @@ import * as Yup from 'yup';
 import { useNavigate } from 'react-router-dom';
 import PaymentForm from '../payment/PaymentForm';
 import SuccessNotification from '../common/SuccessNotification';
+import { applicationApi } from '../../services/api';
 
 interface ApplicationFormData {
   // Personal Information
@@ -120,6 +121,33 @@ const steps = [
   },
 ];
 
+const validationSchemas = {
+  0: Yup.object({
+    firstName: Yup.string().required('First name is required'),
+    lastName: Yup.string().required('Last name is required'),
+  }),
+  1: Yup.object({
+    university: Yup.string().required('University name is required'),
+    degree: Yup.string().required('Degree is required'),
+  }),
+  2: Yup.object({
+    employer: Yup.string(),
+  }),
+  3: Yup.object().shape({
+    references: Yup.array().of(
+      Yup.object().shape({
+        name: Yup.string(),
+        email: Yup.string(),
+        phone: Yup.string(),
+        relationship: Yup.string(),
+      })
+    ),
+  }),
+  4: Yup.object({}),
+  5: Yup.object({}),
+  6: Yup.object({}),
+};
+
 const ApplicationFlow: React.FC = () => {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
@@ -128,6 +156,7 @@ const ApplicationFlow: React.FC = () => {
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [processingApplication, setProcessingApplication] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const formik = useFormik({
     initialValues: {
@@ -160,14 +189,10 @@ const ApplicationFlow: React.FC = () => {
       criminalRecord: false,
       disciplinaryAction: false,
       legalDeclaration: false,
-    } as ApplicationFormData,
-    validationSchema: Yup.object({
-      firstName: Yup.string().required('Required'),
-      lastName: Yup.string().required('Required'),
-      email: Yup.string().email('Invalid email').required('Required'),
-      phone: Yup.string().required('Required'),
-      // Add more validation rules as needed
-    }),
+    },
+    validationSchema: validationSchemas[activeStep],
+    validateOnMount: false,
+    validateOnChange: true,
     onSubmit: async (values) => {
       if (activeStep === steps.length - 1) {
         setShowPaymentDialog(true);
@@ -178,6 +203,10 @@ const ApplicationFlow: React.FC = () => {
   });
 
   const handleNext = () => {
+    if (activeStep === steps.length - 1) {
+      formik.handleSubmit();
+      return;
+    }
     setActiveStep((prevStep) => prevStep + 1);
   };
 
@@ -204,8 +233,27 @@ const ApplicationFlow: React.FC = () => {
   const handlePayment = async (paymentData: any) => {
     setPaymentProcessing(true);
     try {
-      // Simulate payment processing
+      // Process payment
       await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Prepare application data
+      const applicationData = {
+        ...formik.values,
+        payment: {
+          amount: 150,
+          status: 'completed',
+          transactionId: Math.random().toString(36).substring(7),
+          paymentDate: new Date().toISOString(),
+          paymentMethod: 'credit_card'
+        },
+        status: 'submitted',
+        submissionDate: new Date().toISOString(),
+        licenseTypeId: 'PROF_ENG_001' // You might want to make this dynamic based on the license type
+      };
+
+      // Submit application to backend
+      await applicationApi.create(applicationData);
+      
       setShowPaymentDialog(false);
       setProcessingApplication(true);
       setShowSuccess(true);
@@ -213,8 +261,12 @@ const ApplicationFlow: React.FC = () => {
       // Simulate application processing
       await new Promise(resolve => setTimeout(resolve, 3000));
       setProcessingApplication(false);
+      
+      // Navigate to application history
+      navigate('/application-history');
     } catch (error) {
-      console.error('Payment failed:', error);
+      console.error('Payment or submission failed:', error);
+      setPaymentError('Failed to process payment or submit application. Please try again.');
     } finally {
       setPaymentProcessing(false);
     }
@@ -295,7 +347,7 @@ const ApplicationFlow: React.FC = () => {
       case 3:
         return (
           <Grid container spacing={3}>
-            {formik.values.references.map((_, index) => (
+            {formik.values.references.map((reference, index) => (
               <Grid item xs={12} key={index}>
                 <Card variant="outlined">
                   <CardContent>
@@ -308,11 +360,37 @@ const ApplicationFlow: React.FC = () => {
                           fullWidth
                           label="Name"
                           name={`references.${index}.name`}
-                          value={formik.values.references[index].name}
+                          value={reference.name}
                           onChange={formik.handleChange}
                         />
                       </Grid>
-                      {/* Add more reference fields */}
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Email"
+                          name={`references.${index}.email`}
+                          value={reference.email}
+                          onChange={formik.handleChange}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Phone"
+                          name={`references.${index}.phone`}
+                          value={reference.phone}
+                          onChange={formik.handleChange}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Relationship"
+                          name={`references.${index}.relationship`}
+                          value={reference.relationship}
+                          onChange={formik.handleChange}
+                        />
+                      </Grid>
                     </Grid>
                   </CardContent>
                 </Card>
@@ -321,10 +399,16 @@ const ApplicationFlow: React.FC = () => {
             <Grid item xs={12}>
               <Button
                 variant="outlined"
-                onClick={() => formik.setFieldValue('references', [
-                  ...formik.values.references,
-                  { name: '', email: '', phone: '', relationship: '' }
-                ])}
+                onClick={() => {
+                  const newReferences = [...formik.values.references];
+                  newReferences.push({
+                    name: '',
+                    email: '',
+                    phone: '',
+                    relationship: '',
+                  });
+                  formik.setFieldValue('references', newReferences);
+                }}
               >
                 Add Reference
               </Button>
@@ -444,7 +528,7 @@ const ApplicationFlow: React.FC = () => {
       </Paper>
 
       <Paper sx={{ p: 3 }}>
-        <form onSubmit={formik.handleSubmit}>
+        <form onSubmit={(e) => { e.preventDefault(); formik.handleSubmit(); }}>
           {renderStepContent(activeStep)}
           
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
@@ -455,8 +539,7 @@ const ApplicationFlow: React.FC = () => {
             )}
             <Button
               variant="contained"
-              type="submit"
-              disabled={formik.isSubmitting}
+              onClick={handleNext}
             >
               {activeStep === steps.length - 1 ? 'Submit & Pay' : 'Next'}
             </Button>
