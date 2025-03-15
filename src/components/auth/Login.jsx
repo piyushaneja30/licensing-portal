@@ -6,32 +6,32 @@ import {
   TextField,
   Button,
   Link,
-  CircularProgress,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  useTheme,
+  alpha,
+  Stack,
+  Fade,
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { loginStart, loginSuccess, loginFailure, clearError } from '../../store/slices/authSlice';
+import LockIcon from '@mui/icons-material/Lock';
 
 const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const theme = useTheme();
   const { loading, error, isAuthenticated } = useSelector((state) => state.auth);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [showVerification, setShowVerification] = useState(false);
+  const [touched, setTouched] = useState({ email: false, password: false });
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  // Clear any existing errors when component mounts
   useEffect(() => {
+    setIsLoaded(true);
     dispatch(clearError());
   }, [dispatch]);
 
-  // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard');
@@ -40,184 +40,204 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setTouched({ email: true, password: true });
+
     if (!email || !password) {
       return;
     }
+
     dispatch(loginStart());
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // For testing, always show 2FA dialog
-      setShowVerification(true);
-      dispatch(clearError()); // Clear loading state after showing dialog
+      const response = await fetch('http://localhost:5001/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      dispatch(loginSuccess(data));
+      navigate('/dashboard');
     } catch (err) {
       dispatch(loginFailure(err.message || 'Login failed'));
     }
   };
 
-  const handleVerification = async () => {
-    if (!verificationCode) return;
-    
-    dispatch(loginStart());
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (verificationCode === '123456') {
-        // Use a hardcoded token for testing
-        const token = 'test-token';
-        
-        dispatch(loginSuccess({
-          user: {
-            id: 'test-user-id',
-            email,
-            firstName: 'Test',
-            lastName: 'User',
-          },
-          token,
-          mfaRequired: false
-        }));
-        setShowVerification(false);
-        navigate('/dashboard');
-      } else {
-        throw new Error('Invalid verification code');
-      }
-    } catch (err) {
-      dispatch(loginFailure(err.message || 'Verification failed'));
-    }
-  };
-
-  const handleCloseVerification = () => {
-    if (loading) return;
-    setShowVerification(false);
-    setVerificationCode('');
-    dispatch(clearError());
-  };
-
   return (
-    <Box
-      sx={{
+    <Box 
+      sx={{ 
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor: 'background.default',
-        py: 4,
+        background: '#fff',
+        position: 'relative',
+        overflow: 'hidden',
       }}
     >
-      <Paper
-        elevation={3}
+      {/* Background pattern */}
+      <Box
         sx={{
-          p: 4,
-          width: '100%',
-          maxWidth: 400,
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          opacity: 0.05,
+          background: 'radial-gradient(circle at center, #1976d2 1px, transparent 1px) 0 0 / 40px 40px',
         }}
-      >
-        <Typography variant="h5" component="h1" gutterBottom align="center">
-          Sign in to Licensing Portal
-        </Typography>
+      />
 
-        {error && !showVerification && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        <form onSubmit={handleLogin}>
-          <TextField
-            fullWidth
-            id="email"
-            name="email"
-            label="Email Address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            error={!email}
-            helperText={!email && 'Required'}
-            margin="normal"
-            disabled={loading || showVerification}
-          />
-          <TextField
-            fullWidth
-            id="password"
-            name="password"
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            error={!password}
-            helperText={!password && 'Required'}
-            margin="normal"
-            disabled={loading || showVerification}
-          />
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3 }}
-            disabled={loading || !email || !password || showVerification}
-          >
-            {loading && !showVerification ? <CircularProgress size={24} /> : 'Sign In'}
-          </Button>
-        </form>
-
-        <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Link component="button" variant="body2" onClick={() => navigate('/forgot-password')}>
-            Forgot password?
-          </Link>
-        </Box>
-        <Box sx={{ mt: 1, textAlign: 'center' }}>
-          <Link component="button" variant="body2" onClick={() => navigate('/register')}>
-            Don't have an account? Sign up
-          </Link>
-        </Box>
-
-        {/* Verification Dialog */}
-        <Dialog 
-          open={showVerification} 
-          onClose={loading ? undefined : handleCloseVerification}
-          disableEscapeKeyDown={loading}
+      <Fade in={isLoaded} timeout={1000}>
+        <Paper
+          elevation={2}
+          sx={{
+            p: 4,
+            width: '100%',
+            maxWidth: 440,
+            position: 'relative',
+            borderRadius: '24px',
+            background: '#fff',
+          }}
         >
-          <DialogTitle>Two-Factor Authentication</DialogTitle>
-          <DialogContent>
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              Please enter the verification code sent to your device.
-            </Typography>
-            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-              For testing, use code: 123456
-            </Typography>
-            <TextField
-              fullWidth
-              label="Verification Code"
-              value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value)}
-              error={!!error}
-              helperText={error}
-              disabled={loading}
-              autoFocus
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && verificationCode) {
-                  handleVerification();
-                }
+          <Stack spacing={3} alignItems="center">
+            <Box
+              sx={{
+                width: 56,
+                height: 56,
+                borderRadius: '16px',
+                background: alpha(theme.palette.primary.main, 0.1),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mb: 1,
               }}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button 
-              onClick={handleCloseVerification} 
-              disabled={loading}
             >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleVerification} 
-              variant="contained"
-              disabled={loading || !verificationCode}
+              <LockIcon sx={{ fontSize: 32, color: theme.palette.primary.main }} />
+            </Box>
+
+            <Typography
+              variant="h4"
+              sx={{
+                color: '#1a1a1a',
+                fontWeight: 600,
+                textAlign: 'center',
+                fontSize: '1.75rem',
+                mb: 1,
+              }}
             >
-              {loading ? <CircularProgress size={24} /> : 'Verify'}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </Paper>
+              Sign in to Licensing Portal
+            </Typography>
+
+            {error && (
+              <Alert 
+                severity="error" 
+                sx={{ 
+                  width: '100%',
+                  bgcolor: alpha('#ff3d00', 0.1),
+                  border: `1px solid ${alpha('#ff3d00', 0.2)}`,
+                  '& .MuiAlert-icon': {
+                    color: '#ff3d00'
+                  }
+                }}
+              >
+                {error}
+              </Alert>
+            )}
+
+            <form onSubmit={handleLogin} style={{ width: '100%' }}>
+              <Stack spacing={3} sx={{ mt: 2 }}>
+                <TextField
+                  fullWidth
+                  id="email"
+                  name="email"
+                  label="Email Address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => setTouched({ ...touched, email: true })}
+                  error={touched.email && !email}
+                  helperText={touched.email && !email ? 'Email is required' : ''}
+                  disabled={loading}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: alpha('#000', 0.2),
+                      },
+                      '&:hover fieldset': {
+                        borderColor: alpha('#000', 0.3),
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: theme.palette.primary.main,
+                      },
+                    },
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  id="password"
+                  name="password"
+                  label="Password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onBlur={() => setTouched({ ...touched, password: true })}
+                  error={touched.password && !password}
+                  helperText={touched.password && !password ? 'Password is required' : ''}
+                  disabled={loading}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '& fieldset': {
+                        borderColor: alpha('#000', 0.2),
+                      },
+                      '&:hover fieldset': {
+                        borderColor: alpha('#000', 0.3),
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: theme.palette.primary.main,
+                      },
+                    },
+                  }}
+                />
+
+                <Button
+                  type="submit"
+                  fullWidth
+                  variant="contained"
+                  disabled={loading || !email || !password}
+                  sx={{
+                    py: 1.5,
+                    bgcolor: theme.palette.primary.main,
+                    color: '#fff',
+                    fontWeight: 600,
+                    borderRadius: '12px',
+                    fontSize: '1rem',
+                    '&:hover': {
+                      bgcolor: theme.palette.primary.dark,
+                    },
+                  }}
+                >
+                  {loading ? 'Signing in...' : 'Sign in'}
+                </Button>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                  <Link href="/forgot-password" underline="hover" sx={{ color: theme.palette.primary.main }}>
+                    Forgot password?
+                  </Link>
+                  <Link href="/register" underline="hover" sx={{ color: theme.palette.primary.main }}>
+                    Create account
+                  </Link>
+                </Box>
+              </Stack>
+            </form>
+          </Stack>
+        </Paper>
+      </Fade>
     </Box>
   );
 };

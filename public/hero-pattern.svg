@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1440" height="1024" viewBox="0 0 1440 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g opacity="0.3">
+    <circle cx="120" cy="120" r="4" fill="white"/>
+    <circle cx="360" cy="120" r="4" fill="white"/>
+    <circle cx="600" cy="120" r="4" fill="white"/>
+    <circle cx="840" cy="120" r="4" fill="white"/>
+    <circle cx="1080" cy="120" r="4" fill="white"/>
+    <circle cx="1320" cy="120" r="4" fill="white"/>
+    
+    <circle cx="240" cy="240" r="4" fill="white"/>
+    <circle cx="480" cy="240" r="4" fill="white"/>
+    <circle cx="720" cy="240" r="4" fill="white"/>
+    <circle cx="960" cy="240" r="4" fill="white"/>
+    <circle cx="1200" cy="240" r="4" fill="white"/>
+    <circle cx="1440" cy="240" r="4" fill="white"/>
+    
+    <circle cx="120" cy="360" r="4" fill="white"/>
+    <circle cx="360" cy="360" r="4" fill="white"/>
+    <circle cx="600" cy="360" r="4" fill="white"/>
+    <circle cx="840" cy="360" r="4" fill="white"/>
+    <circle cx="1080" cy="360" r="4" fill="white"/>
+    <circle cx="1320" cy="360" r="4" fill="white"/>
+    
+    <circle cx="240" cy="480" r="4" fill="white"/>
+    <circle cx="480" cy="480" r="4" fill="white"/>
+    <circle cx="720" cy="480" r="4" fill="white"/>
+    <circle cx="960" cy="480" r="4" fill="white"/>
+    <circle cx="1200" cy="480" r="4" fill="white"/>
+    <circle cx="1440" cy="480" r="4" fill="white"/>
+    
+    <circle cx="120" cy="600" r="4" fill="white"/>
+    <circle cx="360" cy="600" r="4" fill="white"/>
+    <circle cx="600" cy="600" r="4" fill="white"/>
+    <circle cx="840" cy="600" r="4" fill="white"/>
+    <circle cx="1080" cy="600" r="4" fill="white"/>
+    <circle cx="1320" cy="600" r="4" fill="white"/>
+    
+    <circle cx="240" cy="720" r="4" fill="white"/>
+    <circle cx="480" cy="720" r="4" fill="white"/>
+    <circle cx="720" cy="720" r="4" fill="white"/>
+    <circle cx="960" cy="720" r="4" fill="white"/>
+    <circle cx="1200" cy="720" r="4" fill="white"/>
+    <circle cx="1440" cy="720" r="4" fill="white"/>
+    
+    <path d="M120 120L360 120M360 120L600 120M600 120L840 120M840 120L1080 120M1080 120L1320 120" stroke="white" stroke-width="0.5" opacity="0.2"/>
+    <path d="M240 240L480 240M480 240L720 240M720 240L960 240M960 240L1200 240M1200 240L1440 240" stroke="white" stroke-width="0.5" opacity="0.2"/>
+    <path d="M120 360L360 360M360 360L600 360M600 360L840 360M840 360L1080 360M1080 360L1320 360" stroke="white" stroke-width="0.5" opacity="0.2"/>
+    <path d="M240 480L480 480M480 480L720 480M720 480L960 480M960 480L1200 480M1200 480L1440 480" stroke="white" stroke-width="0.5" opacity="0.2"/>
+    <path d="M120 600L360 600M360 600L600 600M600 600L840 600M840 600L1080 600M1080 600L1320 600" stroke="white" stroke-width="0.5" opacity="0.2"/>
+    <path d="M240 720L480 720M480 720M720 720M720 720L960 720M960 720L1200 720M1200 720L1440 720" stroke="white" stroke-width="0.5" opacity="0.2"/>
+  </g>
+</svg> 

@@ -15,6 +15,7 @@ import Profile from './components/profile/Profile';
 import Settings from './components/settings/Settings';
 import HelpSupport from './components/help/HelpSupport';
 import MyLicenses from './components/license/MyLicenses';
+import LandingPage from './components/LandingPage';
 import { RootState } from './store';
 
 interface ProtectedRouteProps {
@@ -65,6 +66,7 @@ const App = () => {
         <Router>
           <Routes>
             {/* Public routes */}
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
             <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/dashboard" />} />
             
@@ -75,15 +77,14 @@ const App = () => {
                 <ProtectedRoute>
                   <DashboardLayout onToggleTheme={() => setMode(mode === 'light' ? 'dark' : 'light')} mode={mode}>
                     <Routes>
-                      <Route path="/" element={<Navigate to="/dashboard" />} />
-                      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                      <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/new-application" element={<ApplicationFlow />} />
                       <Route path="/history" element={<ApplicationHistory />} />
                       <Route path="/license-search" element={<LicenseSearch />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/settings" element={<Settings />} />
                       <Route path="/support" element={<HelpSupport />} />
-                      <Route path="/licenses" element={<ProtectedRoute><MyLicenses /></ProtectedRoute>} />
+                      <Route path="/licenses" element={<MyLicenses />} />
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />
                     </Routes>
                   </DashboardLayout>

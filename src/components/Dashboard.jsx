@@ -31,14 +31,22 @@ import {
   Security as SecurityIcon,
   ReceiptLong as ReceiptLongIcon,
   Campaign as CampaignIcon,
+  Logout as LogoutIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from '../store/slices/authSlice';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const [currentTab, setCurrentTab] = useState(0);
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate('/login');
+  };
 
   const stats = [
     {
@@ -173,14 +181,25 @@ const Dashboard = () => {
 
   return (
     <Box>
-      {/* Welcome Section */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Welcome back, {user?.firstName || 'User'}!
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Here's an overview of your licensing activities
-        </Typography>
+      {/* Header with Welcome and Logout */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Box>
+          <Typography variant="h4" gutterBottom>
+            Welcome back, {user?.firstName || 'User'}!
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Here's an overview of your licensing activities
+          </Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          color="primary"
+          startIcon={<LogoutIcon />}
+          onClick={handleLogout}
+          sx={{ height: 'fit-content' }}
+        >
+          Logout
+        </Button>
       </Box>
 
       {/* Alert Section */}
