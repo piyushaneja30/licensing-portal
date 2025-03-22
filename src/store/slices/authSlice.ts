@@ -1,11 +1,13 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-export interface User {
-  id: string;
+interface Profile {
   firstName: string;
   lastName: string;
-  email: string;
   phone?: string;
+  profession?: string;
+  licenseNumber?: string;
+  specialization?: string;
+  yearsOfExperience?: number;
   address?: string;
   city?: string;
   state?: string;
@@ -13,7 +15,24 @@ export interface User {
   company?: string;
   title?: string;
   bio?: string;
-  profileImage?: string;
+}
+
+export interface User {
+  _id: string;
+  email: string;
+  role: string;
+  accountType: string;
+  firstName?: string;
+  lastName?: string;
+  profile?: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+    profession: string;
+    licenseNumber: string;
+    specialization: string;
+    yearsOfExperience: number;
+  };
 }
 
 export interface AuthState {
@@ -30,8 +49,8 @@ export interface AuthState {
 
 const initialState: AuthState = {
   user: null,
-  token: null,
-  isAuthenticated: false,
+  token: localStorage.getItem('token'),
+  isAuthenticated: !!localStorage.getItem('token'),
   loading: false,
   error: null,
   mfaRequired: false,
@@ -54,10 +73,15 @@ const authSlice = createSlice({
       state.user = action.payload.user;
       state.token = action.payload.token;
       state.error = null;
+      localStorage.setItem('token', action.payload.token);
     },
     loginFailure: (state, action: PayloadAction<string>) => {
       state.loading = false;
       state.error = action.payload;
+      state.isAuthenticated = false;
+      state.user = null;
+      state.token = null;
+      localStorage.removeItem('token');
     },
     logout: (state) => {
       state.user = null;
@@ -69,6 +93,7 @@ const authSlice = createSlice({
       state.mfaVerified = false;
       state.isVerificationRequired = false;
       state.verificationId = null;
+      localStorage.removeItem('token');
     },
     setVerificationRequired: (state, action: PayloadAction<{ verificationId: string }>) => {
       state.isVerificationRequired = true;

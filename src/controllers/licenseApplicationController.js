@@ -4,15 +4,46 @@ export const licenseApplicationController = {
   // Create a new application
   create: async (req, res) => {
     try {
-      const application = new LicenseApplication({
+      console.log('Creating new application with data:', req.body);
+      console.log('User from request:', req.user);
+
+      if (!req.user || !req.user.id) {
+        console.error('No user found in request');
+        return res.status(401).json({ message: 'User not authenticated' });
+      }
+
+      // Create application instance
+      const applicationData = {
         userId: req.user.id,
-        ...req.body
-      });
-      await application.save();
-      res.status(201).json(application);
+        licenseTypeId: req.body.licenseTypeId,
+        status: 'draft',
+        personalInfo: req.body.personalInfo || {},
+        education: req.body.education || [],
+        documents: req.body.documents || []
+      };
+
+      console.log('Creating application with data:', applicationData);
+      
+      const application = new LicenseApplication(applicationData);
+      console.log('Created application instance:', application);
+
+      // Save the application
+      const savedApplication = await application.save();
+      console.log('Application saved successfully:', savedApplication);
+      
+      res.status(201).json(savedApplication);
     } catch (error) {
-      console.error('Error creating application:', error);
-      res.status(500).json({ message: 'Error creating application' });
+      console.error('Detailed error creating application:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        errors: error.errors
+      });
+      res.status(500).json({ 
+        message: 'Error creating application', 
+        error: error.message,
+        details: error.errors
+      });
     }
   },
 
@@ -33,11 +64,19 @@ export const licenseApplicationController = {
   // Get user's applications
   getUserApplications: async (req, res) => {
     try {
+      console.log('Getting applications for user:', req.user);
+      if (!req.user || !req.user.id) {
+        console.error('No user found in request');
+        return res.status(401).json({ message: 'User not authenticated' });
+      }
+
       const applications = await LicenseApplication.find({ userId: req.user.id })
         .sort({ createdAt: -1 });
+      
+      console.log('Found applications:', applications);
       res.json(applications);
     } catch (error) {
-      console.error('Error fetching applications:', error);
+      console.error('Error fetching user applications:', error);
       res.status(500).json({ message: 'Error fetching applications' });
     }
   },

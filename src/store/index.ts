@@ -1,20 +1,28 @@
 import { configureStore } from '@reduxjs/toolkit';
-import { persistStore, persistReducer } from 'redux-persist';
+import { persistStore, persistReducer, PersistConfig } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import { combineReducers } from 'redux';
 import authReducer, { AuthState } from './slices/authSlice';
-import licenseReducer from './slices/licenseSlice';
+import licenseReducer, { LicenseState } from './slices/licenseSlice';
+import applicationReducer, { ApplicationsState } from '../redux/reducers/applicationsSlice';
 
-const persistConfig = {
+// Define the root state interface
+interface StoreState {
+  auth: AuthState;
+  license: LicenseState;
+  application: ApplicationsState;
+}
+
+const persistConfig: PersistConfig<StoreState> = {
   key: 'root',
   storage,
-  whitelist: ['auth'], // Only auth will be persisted
+  whitelist: ['auth', 'application'],
 };
 
 const rootReducer = combineReducers({
   auth: authReducer,
   license: licenseReducer,
-  // Add other reducers here
+  application: applicationReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -31,5 +39,6 @@ export const store = configureStore({
 
 export const persistor = persistStore(store);
 
-export type RootState = ReturnType<typeof rootReducer>;
+// Infer the `RootState` and `AppDispatch` types from the store itself
+export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch; 

@@ -16,6 +16,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { loginStart, loginSuccess, loginFailure, clearError } from '../../store/slices/authSlice';
 import LockIcon from '@mui/icons-material/Lock';
+import api from '../../services/api';
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -48,24 +49,17 @@ const Login = () => {
 
     dispatch(loginStart());
     try {
-      const response = await fetch('http://localhost:5001/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await api.post('/auth/login', { email, password });
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
-
+      // Store token in localStorage
+      localStorage.setItem('token', data.token);
+      
       dispatch(loginSuccess(data));
       navigate('/dashboard');
     } catch (err) {
-      dispatch(loginFailure(err.message || 'Login failed'));
+      const errorMessage = err.response?.data?.message || 'Login failed';
+      dispatch(loginFailure(errorMessage));
     }
   };
 

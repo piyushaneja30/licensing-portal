@@ -4,12 +4,14 @@ import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { useSelector } from 'react-redux';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import DashboardLayout from './components/layout/DashboardLayout';
-import Dashboard from './components/Dashboard';
+import Dashboard from './components/dashboard/Dashboard';
 import ApplicationFlow from './components/application/ApplicationFlow';
 import ApplicationHistory from './components/application/ApplicationHistory';
+import ApplicationSuccess from './components/application/ApplicationSuccess';
 import LicenseSearch from './components/license/LicenseSearch';
 import Profile from './components/profile/Profile';
 import Settings from './components/settings/Settings';
@@ -25,6 +27,16 @@ interface ProtectedRouteProps {
 const App = () => {
   const [mode, setMode] = useState<'light' | 'dark'>('light');
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  
+  // Create a client
+  const queryClient = useMemo(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        refetchOnWindowFocus: false,
+        retry: 1,
+      },
+    },
+  }), []);
 
   const theme = useMemo(
     () =>
@@ -60,41 +72,44 @@ const App = () => {
   };
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Router>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
-            <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/dashboard" />} />
-            
-            {/* Protected routes */}
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout onToggleTheme={() => setMode(mode === 'light' ? 'dark' : 'light')} mode={mode}>
-                    <Routes>
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/new-application" element={<ApplicationFlow />} />
-                      <Route path="/history" element={<ApplicationHistory />} />
-                      <Route path="/license-search" element={<LicenseSearch />} />
-                      <Route path="/profile" element={<Profile />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="/support" element={<HelpSupport />} />
-                      <Route path="/licenses" element={<MyLicenses />} />
-                      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                    </Routes>
-                  </DashboardLayout>
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </Router>
-      </ThemeProvider>
-    </LocalizationProvider>
+    <QueryClientProvider client={queryClient}>
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Router>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
+              <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/dashboard" />} />
+              
+              {/* Protected routes */}
+              <Route
+                path="/*"
+                element={
+                  <ProtectedRoute>
+                    <DashboardLayout onToggleTheme={() => setMode(mode === 'light' ? 'dark' : 'light')} mode={mode}>
+                      <Routes>
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/new-application" element={<ApplicationFlow />} />
+                        <Route path="/application-success/:applicationNumber" element={<ApplicationSuccess />} />
+                        <Route path="/history" element={<ApplicationHistory />} />
+                        <Route path="/license-search" element={<LicenseSearch />} />
+                        <Route path="/profile" element={<Profile />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/support" element={<HelpSupport />} />
+                        <Route path="/licenses" element={<MyLicenses />} />
+                        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                      </Routes>
+                    </DashboardLayout>
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </Router>
+        </ThemeProvider>
+      </LocalizationProvider>
+    </QueryClientProvider>
   );
 };
 

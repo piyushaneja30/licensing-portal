@@ -8,7 +8,6 @@ import {
   Button,
   Avatar,
   Box,
-  Divider,
   Alert,
   Card,
   CardContent,
@@ -24,26 +23,57 @@ import { RootState } from '../../store';
 import { User, updateUser } from '../../store/slices/authSlice';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
+import axios from 'axios';
+import type { AxiosError } from 'axios';
+
+interface ProfileResponse {
+  _id: string;
+  email: string;
+  role: string;
+  accountType: string;
+  profile: {
+    firstName: string;
+    lastName: string;
+    phone?: string;
+    profession?: string;
+    licenseNumber?: string;
+    specialization?: string;
+    yearsOfExperience?: number;
+    address?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    company?: string;
+    title?: string;
+    bio?: string;
+  };
+}
 
 const Profile: React.FC = () => {
   const dispatch = useDispatch();
-  const { user } = useSelector((state: RootState) => state.auth);
+  const auth = useSelector((state: RootState) => state.auth);
+  const user = auth?.user;
   const [isEditing, setIsEditing] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [error, setError] = useState('');
 
   const formik = useFormik({
     initialValues: {
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
+      firstName: user?.profile?.firstName || '',
+      lastName: user?.profile?.lastName || '',
       email: user?.email || '',
-      phone: user?.phone || '',
-      address: user?.address || '',
-      city: user?.city || '',
-      state: user?.state || '',
-      zipCode: user?.zipCode || '',
-      company: user?.company || '',
-      title: user?.title || '',
-      bio: user?.bio || '',
+      phone: user?.profile?.phone || '',
+      address: user?.profile?.address || '',
+      city: user?.profile?.city || '',
+      state: user?.profile?.state || '',
+      zipCode: user?.profile?.zipCode || '',
+      company: user?.profile?.company || '',
+      title: user?.profile?.title || '',
+      bio: user?.profile?.bio || '',
+      profession: user?.profile?.profession || '',
+      licenseNumber: user?.profile?.licenseNumber || '',
+      specialization: user?.profile?.specialization || '',
+      yearsOfExperience: user?.profile?.yearsOfExperience || 0,
     },
     validationSchema: Yup.object({
       firstName: Yup.string().required('Required'),
@@ -57,16 +87,88 @@ const Profile: React.FC = () => {
       company: Yup.string(),
       title: Yup.string(),
       bio: Yup.string(),
+      profession: Yup.string(),
+      licenseNumber: Yup.string(),
+      specialization: Yup.string(),
+      yearsOfExperience: Yup.number().min(0),
     }),
     onSubmit: async (values) => {
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        dispatch(updateUser(values));
-        setSuccessMessage('Profile updated successfully');
-        setIsEditing(false);
-      } catch (error) {
-        console.error('Failed to update profile:', error);
+        setError('');
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          setError('Authentication token not found. Please log in again.');
+          return;
+        }
+
+        console.log('Making profile update request with token:', token);
+        console.log('Update values:', values);
+
+        // Send the values directly as the backend expects them
+        const response = await axios.put<ProfileResponse>(
+          '/api/auth/profile',
+          {
+            firstName: values.firstName,
+            lastName: values.lastName,
+            phone: values.phone,
+            address: values.address,
+            city: values.city,
+            state: values.state,
+            zipCode: values.zipCode,
+            company: values.company,
+            title: values.title,
+            bio: values.bio,
+            profession: values.profession,
+            licenseNumber: values.licenseNumber,
+            specialization: values.specialization,
+            yearsOfExperience: Number(values.yearsOfExperience),
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        console.log('Profile update response:', response);
+
+        if (response.data) {
+          // Convert the response data to match our User type
+          const userData: User = {
+            id: response.data._id,
+            email: response.data.email,
+            role: response.data.role as 'user' | 'admin',
+            accountType: response.data.accountType as 'individual' | 'business',
+            profile: response.data.profile,
+          };
+
+          console.log('Converted user data:', userData);
+
+          // Update Redux store with the converted data
+          dispatch(updateUser(userData));
+          setSuccessMessage('Profile updated successfully');
+          setIsEditing(false);
+        } else {
+          throw new Error('No data received from server');
+        }
+      } catch (err) {
+        console.error('Failed to update profile:', err);
+        const error = err as AxiosError;
+        if (axios.isAxiosError(error)) {
+          console.error('Axios error details:', {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            data: error.response?.data,
+            headers: error.response?.headers,
+            config: error.config
+          });
+          const errorMessage = error.response?.data?.message || error.message;
+          setError(`Failed to update profile: ${errorMessage}`);
+        } else {
+          setError('Failed to update profile. Please try again.');
+        }
       }
     },
   });
@@ -74,6 +176,7 @@ const Profile: React.FC = () => {
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
     setSuccessMessage('');
+    setError('');
   };
 
   return (
@@ -99,6 +202,12 @@ const Profile: React.FC = () => {
           </Alert>
         )}
 
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+
         <Grid container spacing={4}>
           <Grid item xs={12} md={4}>
             <Card variant="outlined">
@@ -113,25 +222,11 @@ const Profile: React.FC = () => {
                       mx: 'auto',
                     }}
                   >
-                    {user?.firstName?.[0]}
+                    {user?.profile?.firstName?.[0]}
                   </Avatar>
-                  {isEditing && (
-                    <IconButton
-                      sx={{
-                        position: 'absolute',
-                        bottom: 16,
-                        right: -8,
-                        backgroundColor: 'background.paper',
-                      }}
-                      component="label"
-                    >
-                      <input hidden type="file" accept="image/*" />
-                      <PhotoCameraIcon />
-                    </IconButton>
-                  )}
                 </Box>
                 <Typography variant="h6" gutterBottom>
-                  {user?.firstName} {user?.lastName}
+                  {user?.profile?.firstName} {user?.profile?.lastName}
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
                   {user?.email}
@@ -177,7 +272,7 @@ const Profile: React.FC = () => {
                     onChange={formik.handleChange}
                     error={formik.touched.email && Boolean(formik.errors.email)}
                     helperText={formik.touched.email && formik.errors.email}
-                    disabled={!isEditing}
+                    disabled={true} // Email should not be editable
                   />
                 </Grid>
                 <Grid item xs={12}>
@@ -186,6 +281,47 @@ const Profile: React.FC = () => {
                     label="Phone"
                     name="phone"
                     value={formik.values.phone}
+                    onChange={formik.handleChange}
+                    disabled={!isEditing}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Profession"
+                    name="profession"
+                    value={formik.values.profession}
+                    onChange={formik.handleChange}
+                    disabled={!isEditing}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="License Number"
+                    name="licenseNumber"
+                    value={formik.values.licenseNumber}
+                    onChange={formik.handleChange}
+                    disabled={!isEditing}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Specialization"
+                    name="specialization"
+                    value={formik.values.specialization}
+                    onChange={formik.handleChange}
+                    disabled={!isEditing}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Years of Experience"
+                    name="yearsOfExperience"
+                    type="number"
+                    value={formik.values.yearsOfExperience}
                     onChange={formik.handleChange}
                     disabled={!isEditing}
                   />

@@ -15,6 +15,18 @@ export default {
     filename: 'bundle.js',
     publicPath: '/',
   },
+  devServer: {
+    port: 3000,
+    hot: true,
+    historyApiFallback: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5001',
+        secure: false,
+        changeOrigin: true,
+      },
+    },
+  },
   module: {
     rules: [
       {
@@ -71,12 +83,4 @@ export default {
     }),
     new ReactRefreshWebpackPlugin(),
   ],
-  devServer: {
-    hot: true,
-    historyApiFallback: true,
-    port: 3000,
-    static: {
-      directory: path.join(__dirname, 'public'),
-    },
-  },
 }; 

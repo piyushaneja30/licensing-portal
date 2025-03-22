@@ -4,6 +4,13 @@ import { authenticateUser, isAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Debug middleware
+router.use((req, res, next) => {
+  console.log('License Application Route:', req.method, req.url);
+  console.log('User:', req.user);
+  next();
+});
+
 // Public route - no authentication required
 router.get('/all', licenseApplicationController.getAllApplications);
 

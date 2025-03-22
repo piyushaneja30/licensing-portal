@@ -3,6 +3,20 @@ import { Request } from '../types/express.js';
 import { LicenseApplication } from '../models/LicenseApplication.js';
 
 export const licenseApplicationController = {
+  // Get all applications (admin only)
+  getAllApplications: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const applications = await LicenseApplication.find()
+        .populate('userId', 'email profile')
+        .sort({ createdAt: -1 });
+      
+      res.json(applications);
+    } catch (error) {
+      console.error('Error fetching all applications:', error);
+      res.status(500).json({ message: 'Error fetching applications' });
+    }
+  },
+
   // Create a new application
   create: async (req: Request, res: Response): Promise<void> => {
     try {
@@ -14,8 +28,9 @@ export const licenseApplicationController = {
       const applicationData = {
         ...req.body,
         userId: req.user.id,
+        status: 'submitted',
+        submissionDate: new Date(),
         lastUpdated: new Date(),
-        submissionDate: req.body.status === 'submitted' ? new Date() : undefined
       };
 
       // Create and save the application
@@ -35,35 +50,44 @@ export const licenseApplicationController = {
   // Get application by ID
   getById: async (req: Request, res: Response): Promise<void> => {
     try {
-      if (!req.user?.id) {
-        res.status(401).json({ message: 'Authentication required' });
-        return;
-      }
-
-      const application = await LicenseApplication.findById(req.params.id);
+      const application = await LicenseApplication.findById(req.params.id)
+        .populate('userId', 'email profile');
+      
       if (!application) {
         res.status(404).json({ message: 'Application not found' });
         return;
       }
+
       res.json(application);
     } catch (error) {
-      res.status(500).json({ message: 'Error fetching application', error });
+      console.error('Error fetching application:', error);
+      res.status(500).json({ message: 'Error fetching application' });
     }
   },
 
   // Get user's applications
   getUserApplications: async (req: Request, res: Response): Promise<void> => {
     try {
+      console.log('Debug: Getting user applications, user:', req.user);
+
       if (!req.user?.id) {
+        console.log('Debug: No user ID found in request');
         res.status(401).json({ message: 'Authentication required' });
         return;
       }
 
+      console.log('Debug: Searching for applications with userId:', req.user.id);
       const applications = await LicenseApplication.find({ userId: req.user.id })
-        .sort({ lastUpdated: -1 });
+        .sort({ submissionDate: -1 });
+      
+      console.log('Debug: Found applications:', applications.length);
       res.json(applications);
     } catch (error) {
-      res.status(500).json({ message: 'Error fetching applications', error });
+      console.error('Debug: Error fetching user applications:', error);
+      res.status(500).json({ 
+        message: 'Error fetching user applications',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   },
 

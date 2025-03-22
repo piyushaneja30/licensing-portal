@@ -12,111 +12,87 @@ export type LicenseType = {
   renewalPeriod: number; // in months before expiry
 };
 
-export type LicenseApplication = {
-  id: string;
-  licenseTypeId: string;
-  userId: string;
-  status: 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected';
-  submissionDate?: string;
-  lastUpdated: string;
-  expiryDate?: string;
-  personalInfo: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    dateOfBirth: string;
-    ssn: string;
-    address: {
-      street: string;
-      city: string;
-      state: string;
-      zipCode: string;
-      country: string;
-    };
-  };
-  education: {
-    institution: string;
-    degree: string;
-    major: string;
-    graduationDate: string;
-    gpa?: number;
-  }[];
-  experience: {
-    employer: string;
-    position: string;
-    startDate: string;
-    endDate?: string;
-    current: boolean;
-    responsibilities: string;
-    supervisor: {
-      name: string;
-      phone: string;
-      email: string;
-    };
-  }[];
-  certifications: {
-    name: string;
-    issuingBody: string;
-    issueDate: string;
-    expiryDate?: string;
-    certificateNumber: string;
-  }[];
-  references: {
-    name: string;
-    relationship: string;
-    company: string;
-    phone: string;
-    email: string;
-    yearsKnown: number;
-  }[];
-  documents: {
-    type: string;
-    name: string;
-    url: string;
-    uploadDate: string;
-    status: 'pending' | 'approved' | 'rejected';
-    comments?: string;
-  }[];
-  payment: {
-    amount: number;
-    status: 'pending' | 'completed' | 'failed';
-    transactionId?: string;
-    paymentDate?: string;
-    paymentMethod?: string;
-  };
-  reviewNotes?: {
-    date: string;
-    reviewer: string;
-    note: string;
-    status: string;
-  }[];
-};
+export interface PersonalInfo {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  dateOfBirth: Date;
+  ssn: string;
+  gender: string;
+  citizenship: string;
+  immigrationStatus: string;
+  immigrationNumber: string;
+}
 
-export type License = {
+export interface Education {
+  institution: string;
+  degree: string;
+  graduationYear: number;
+  field: string;
+  gpa: number;
+  credits: number;
+  major: string;
+  minor: string;
+  honors: string;
+  thesis: string;
+}
+
+export interface WorkExperience {
+  employer: string;
+  position: string;
+  startDate: Date;
+  endDate: Date;
+  responsibilities: string;
+  supervisor: string;
+  supervisorEmail: string;
+  supervisorPhone: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+}
+
+export interface Document {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  uploadedAt: string;
+}
+
+export interface LicenseApplication {
+  id: string;
+  applicationNumber: string;
+  userId: string;
+  licenseTypeId: string;
+  status: 'draft' | 'pending' | 'approved' | 'rejected';
+  submittedDate: string;
+  personalInfo: PersonalInfo;
+  education: Education[];
+  workExperience: WorkExperience[];
+  documents: Document[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface License {
   id: string;
   licenseNumber: string;
-  licenseTypeId: string;
   userId: string;
-  status: LicenseStatus;
-  issueDate: string;
+  type: string;
+  status: 'active' | 'expired' | 'suspended' | 'revoked';
+  issuedDate: string;
   expiryDate: string;
-  lastRenewalDate?: string;
   applicationId: string;
-  documents: {
-    type: string;
-    url: string;
-    uploadDate: string;
-  }[];
-  verificationUrl: string;
-  qrCode: string;
-  history: {
-    date: string;
-    action: string;
-    performedBy: string;
-    notes?: string;
-  }[];
-};
+  createdAt: string;
+  updatedAt: string;
+}
 
 // Predefined license types
 export const LICENSE_TYPES: Record<string, LicenseType> = {

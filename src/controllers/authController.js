@@ -274,5 +274,65 @@ export const authController = {
       console.error('Logout error:', error);
       res.status(500).json({ message: 'Error logging out' });
     }
+  },
+
+  // Update user profile
+  updateProfile: async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'User not authenticated' });
+      }
+
+      const {
+        firstName,
+        lastName,
+        phone,
+        address,
+        city,
+        state,
+        zipCode,
+        company,
+        title,
+        bio,
+        profession,
+        licenseNumber,
+        specialization,
+        yearsOfExperience
+      } = req.body;
+
+      // Build profile update object
+      const profileUpdate = {};
+      if (firstName) profileUpdate.firstName = firstName;
+      if (lastName) profileUpdate.lastName = lastName;
+      if (phone) profileUpdate.phone = phone;
+      if (address) profileUpdate.address = address;
+      if (city) profileUpdate.city = city;
+      if (state) profileUpdate.state = state;
+      if (zipCode) profileUpdate.zipCode = zipCode;
+      if (company) profileUpdate.company = company;
+      if (title) profileUpdate.title = title;
+      if (bio) profileUpdate.bio = bio;
+      if (profession) profileUpdate.profession = profession;
+      if (licenseNumber) profileUpdate.licenseNumber = licenseNumber;
+      if (specialization) profileUpdate.specialization = specialization;
+      if (yearsOfExperience !== undefined) profileUpdate.yearsOfExperience = yearsOfExperience;
+
+      // Update user
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { $set: { profile: profileUpdate } },
+        { new: true, runValidators: true }
+      ).select('-password');
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Update profile error:', error);
+      res.status(500).json({ message: 'Error updating profile' });
+    }
   }
 }; 

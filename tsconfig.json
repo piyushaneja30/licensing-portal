@@ -24,6 +24,6 @@
     "experimentalSpecifiers": true,
     "transpileOnly": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["node_modules"]
 } 

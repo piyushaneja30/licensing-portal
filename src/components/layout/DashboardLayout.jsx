@@ -19,6 +19,7 @@ import {
   Badge,
   Tooltip,
   Switch,
+  ListItemButton,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -39,17 +40,20 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../store/slices/authSlice';
 
-const drawerWidth = 280;
+const DRAWER_WIDTH = 240;
 
 const menuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
   { text: 'My Licenses', icon: <LicenseIcon />, path: '/licenses' },
-  { text: 'New Application', icon: <AddIcon />, path: '/new-application' },
-  { text: 'License Search', icon: <SearchIcon />, path: '/license-search' },
+  { text: 'New Application', icon: <AddIcon />, path: '/application/new' },
+  { text: 'License Search', icon: <SearchIcon />, path: '/search' },
   { text: 'Application History', icon: <HistoryIcon />, path: '/history' },
+];
+
+const bottomMenuItems = [
   { text: 'Profile', icon: <ProfileIcon />, path: '/profile' },
   { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
-  { text: 'Help & Support', icon: <HelpIcon />, path: '/support' },
+  { text: 'Help & Support', icon: <HelpIcon />, path: '/help' },
 ];
 
 const DashboardLayout = ({ children, onToggleTheme, mode }) => {
@@ -88,206 +92,71 @@ const DashboardLayout = ({ children, onToggleTheme, mode }) => {
     navigate('/login');
   };
 
-  const drawer = (
-    <Box 
-      sx={{ 
-        height: '100%', 
-        display: 'flex', 
-        flexDirection: 'column',
-        bgcolor: 'background.paper',
-      }}
-    >
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Avatar
-          sx={{
-            width: 40,
-            height: 40,
-            bgcolor: theme.palette.primary.main,
-            boxShadow: theme.shadows[2],
-          }}
-        >
-          {user?.firstName?.charAt(0) || 'U'}
-        </Avatar>
-        <Box>
-          <Typography variant="subtitle1" noWrap fontWeight="600">
-            {user?.firstName} {user?.lastName}
-          </Typography>
-          <Typography variant="body2" color="textSecondary" noWrap>
-            {user?.email}
-          </Typography>
-        </Box>
-      </Box>
-      <Divider />
-      <List sx={{ flexGrow: 1, px: 2 }}>
-        {menuItems.map((item) => (
-          <ListItem
-            button
-            key={item.text}
-            onClick={() => {
-              navigate(item.path);
-              if (isMobile) handleDrawerToggle();
-            }}
-            sx={{
-              mb: 0.5,
-              borderRadius: 2,
-              color: location.pathname === item.path ? 'primary.main' : 'text.primary',
-              bgcolor: location.pathname === item.path ? 'action.selected' : 'transparent',
-              '&:hover': {
-                bgcolor: 'action.hover',
-              },
-            }}
-          >
-            <ListItemIcon
-              sx={{
-                minWidth: 40,
-                color: location.pathname === item.path ? 'primary.main' : 'inherit',
-              }}
-            >
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText 
-              primary={item.text}
-              primaryTypographyProps={{
-                fontWeight: location.pathname === item.path ? 600 : 400,
-              }}
-            />
-          </ListItem>
-        ))}
-      </List>
-      <Divider />
-      <Box sx={{ p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <LightModeIcon sx={{ mr: 1, color: mode === 'light' ? 'primary.main' : 'text.secondary' }} />
-          <Switch
-            checked={mode === 'dark'}
-            onChange={onToggleTheme}
-            color="primary"
-          />
-          <DarkModeIcon sx={{ ml: 1, color: mode === 'dark' ? 'primary.main' : 'text.secondary' }} />
-        </Box>
-        <ListItem
-          button
-          onClick={handleLogout}
-          sx={{
-            borderRadius: 2,
-            color: 'error.main',
-            '&:hover': {
-              bgcolor: 'error.main',
-              color: 'white',
-            },
-          }}
-        >
-          <ListItemIcon sx={{ minWidth: 40 }}>
-            <LogoutIcon color="inherit" />
-          </ListItemIcon>
-          <ListItemText primary="Logout" />
-        </ListItem>
-      </Box>
-    </Box>
-  );
-
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <AppBar
-        position="fixed"
+    <Box sx={{ display: 'flex' }}>
+      <Drawer
+        variant="permanent"
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-          bgcolor: 'background.paper',
-          color: 'text.primary',
-          borderBottom: 1,
-          borderColor: 'divider',
-          backdropFilter: 'blur(20px)',
-          boxShadow: 'none',
+          width: DRAWER_WIDTH,
+          flexShrink: 0,
+          '& .MuiDrawer-paper': {
+            width: DRAWER_WIDTH,
+            boxSizing: 'border-box',
+            borderRight: '1px solid',
+            borderColor: 'divider',
+          },
         }}
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Box sx={{ flexGrow: 1 }} />
-          <Tooltip title="Notifications">
-            <IconButton color="inherit" onClick={handleNotificationClick}>
-              <Badge badgeContent={3} color="error">
-                <NotificationsIcon />
-              </Badge>
-            </IconButton>
-          </Tooltip>
-          <Menu
-            anchorEl={notificationAnchorEl}
-            open={Boolean(notificationAnchorEl)}
-            onClose={handleNotificationClose}
-            PaperProps={{
-              sx: { 
-                width: 320,
-                maxHeight: 400,
-                mt: 1.5,
-                boxShadow: theme.shadows[8],
-              },
-            }}
-            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-          >
-            <MenuItem>
-              <Typography variant="subtitle2">
-                Your license application has been approved
-              </Typography>
-            </MenuItem>
-            <MenuItem>
-              <Typography variant="subtitle2">
-                Document verification pending
-              </Typography>
-            </MenuItem>
-            <MenuItem>
-              <Typography variant="subtitle2">
-                License renewal reminder
-              </Typography>
-            </MenuItem>
-          </Menu>
-        </Toolbar>
-      </AppBar>
+        <Box sx={{ overflow: 'auto', height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <List component="nav" sx={{ flexGrow: 1 }}>
+            {menuItems.map((item) => (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton
+                  selected={location.pathname === item.path}
+                  onClick={() => navigate(item.path)}
+                  sx={{
+                    '&.Mui-selected': {
+                      backgroundColor: 'primary.lighter',
+                      '&:hover': {
+                        backgroundColor: 'primary.light',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ color: location.pathname === item.path ? 'primary.main' : 'inherit' }}>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={item.text}
+                    sx={{
+                      '& .MuiTypography-root': {
+                        fontWeight: location.pathname === item.path ? 600 : 400,
+                        color: location.pathname === item.path ? 'primary.main' : 'inherit',
+                      },
+                    }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
 
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-      >
-        <Drawer
-          variant={isMobile ? 'temporary' : 'permanent'}
-          open={isMobile ? mobileOpen : true}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
-          }}
-          sx={{
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-              borderRight: 1,
-              borderColor: 'divider',
-              boxShadow: 'none',
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-      </Box>
+          <List component="nav">
+            {bottomMenuItems.map((item) => (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton
+                  selected={location.pathname === item.path}
+                  onClick={() => navigate(item.path)}
+                >
+                  <ListItemIcon>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.text} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      </Drawer>
 
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          minHeight: '100vh',
-          bgcolor: 'background.default',
-        }}
-      >
-        <Toolbar />
+      <Box component="main" sx={{ flexGrow: 1, p: 0 }}>
         {children}
       </Box>
     </Box>

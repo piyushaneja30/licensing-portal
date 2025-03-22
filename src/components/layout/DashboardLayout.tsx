@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Drawer,
@@ -18,6 +18,11 @@ import {
   Menu,
   MenuItem,
   ListItemButton,
+  Button,
+  Tooltip,
+  alpha,
+  Stack,
+  Collapse,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -33,6 +38,13 @@ import {
   LightMode as LightModeIcon,
   Menu as MenuIcon,
   ExitToApp as LogoutIcon,
+  Brightness4 as ThemeIcon,
+  Language as LanguageIcon,
+  Contrast as ContrastIcon,
+  ExpandLess as ExpandLessIcon,
+  ExpandMore as ExpandMoreIcon,
+  Palette as PaletteIcon,
+  AccessTime as ClockIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
@@ -50,9 +62,7 @@ interface DashboardLayoutProps {
 const menuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
   { text: 'My Licenses', icon: <DescriptionIcon />, path: '/licenses' },
-  { text: 'New Application', icon: <AddIcon />, path: '/new-application' },
   { text: 'License Search', icon: <SearchIcon />, path: '/license-search' },
-  { text: 'Application History', icon: <HistoryIcon />, path: '/history' },
 ];
 
 const bottomMenuItems = [
@@ -71,26 +81,75 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const location = useLocation();
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
+
+  // Group all useState hooks together
   const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
   const [profileAnchor, setProfileAnchor] = useState<null | HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const [fontSize, setFontSize] = useState<'normal' | 'large'>('normal');
+  const [highContrast, setHighContrast] = useState(false);
+  const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
+  const [currentTime, setCurrentTime] = useState('');
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
+  // Memoize handlers with useCallback
+  const handleDrawerToggle = useCallback(() => {
+    setMobileOpen(prev => !prev);
+  }, []);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     dispatch(logout());
     navigate('/login');
-  };
+  }, [dispatch, navigate]);
 
-  const handleProfileClick = (event: React.MouseEvent<HTMLElement>) => {
+  const handleProfileClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
     setProfileAnchor(event.currentTarget);
-  };
+  }, []);
 
-  const handleProfileClose = () => {
+  const handleProfileClose = useCallback(() => {
     setProfileAnchor(null);
-  };
+  }, []);
+
+  const handleFontSizeToggle = useCallback(() => {
+    setFontSize(prev => {
+      const newSize = prev === 'normal' ? 'large' : 'normal';
+      document.documentElement.style.fontSize = newSize === 'large' ? '110%' : '100%';
+      return newSize;
+    });
+  }, []);
+
+  const handleHighContrastToggle = useCallback(() => {
+    setHighContrast(prev => {
+      const newValue = !prev;
+      document.documentElement.style.filter = newValue ? 'contrast(1.2)' : 'none';
+      return newValue;
+    });
+  }, []);
+
+  const handleTimeFormatToggle = useCallback(() => {
+    setTimeFormat(prev => prev === '12h' ? '24h' : '12h');
+  }, []);
+
+  const getCurrentTime = useCallback(() => {
+    const now = new Date();
+    if (timeFormat === '12h') {
+      return now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    }
+    return now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }, [timeFormat]);
+
+  // Update time effect
+  useEffect(() => {
+    const updateTime = () => {
+      setCurrentTime(getCurrentTime());
+    };
+    
+    // Initial update
+    updateTime();
+    
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, [getCurrentTime]);
 
   const drawer = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -104,14 +163,31 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               cursor: 'pointer',
             }}
           >
-            {user?.firstName?.[0]?.toUpperCase() || 'U'}
+            {user?.profile?.firstName?.[0]?.toUpperCase() || 'U'}
           </Avatar>
         </IconButton>
         <Box sx={{ overflow: 'hidden' }}>
-          <Typography variant="subtitle1" noWrap>
-            {user?.firstName} {user?.lastName}
+          <Typography 
+            variant="subtitle1" 
+            noWrap
+            sx={{ 
+              fontWeight: 600,
+              color: 'text.primary',
+              lineHeight: 1.2,
+              mb: 0.5
+            }}
+          >
+            {user?.profile?.firstName} {user?.profile?.lastName}
           </Typography>
-          <Typography variant="body2" color="text.secondary" noWrap>
+          <Typography 
+            variant="body2" 
+            color="text.secondary" 
+            noWrap
+            sx={{
+              fontSize: '0.75rem',
+              lineHeight: 1.2
+            }}
+          >
             {user?.email}
           </Typography>
         </Box>
@@ -195,16 +271,131 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           </ListItem>
         ))}
       </List>
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Typography variant="body2" color="text.secondary">
-          {mode === 'light' ? 'Light' : 'Dark'} Mode
-        </Typography>
-        <Switch
-          checked={mode === 'dark'}
-          onChange={onToggleTheme}
-          icon={<LightModeIcon />}
-          checkedIcon={<DarkModeIcon />}
-        />
+
+      <Divider sx={{ my: 1 }} />
+      
+      <Box sx={{ p: 2 }}>
+        {/* Theme Settings Section */}
+        <ListItemButton
+          onClick={() => setThemeMenuOpen(!themeMenuOpen)}
+          sx={{
+            borderRadius: 2,
+            mb: 1,
+          }}
+        >
+          <ListItemIcon>
+            <ThemeIcon color="primary" />
+          </ListItemIcon>
+          <ListItemText primary="Appearance" />
+          {themeMenuOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+        </ListItemButton>
+
+        <Collapse in={themeMenuOpen} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {/* Dark/Light Mode */}
+            <ListItem sx={{ pl: 4 }}>
+              <ListItemIcon>
+                {mode === 'dark' ? <DarkModeIcon /> : <LightModeIcon />}
+              </ListItemIcon>
+              <ListItemText 
+                primary="Dark Mode"
+                secondary={mode === 'dark' ? 'On' : 'Off'}
+              />
+              <Switch
+                checked={mode === 'dark'}
+                onChange={onToggleTheme}
+                edge="end"
+              />
+            </ListItem>
+
+            {/* Font Size */}
+            <ListItem sx={{ pl: 4 }}>
+              <ListItemIcon>
+                <PaletteIcon />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Large Font"
+                secondary={fontSize === 'large' ? 'On' : 'Off'}
+              />
+              <Switch
+                checked={fontSize === 'large'}
+                onChange={handleFontSizeToggle}
+                edge="end"
+              />
+            </ListItem>
+
+            {/* High Contrast */}
+            <ListItem sx={{ pl: 4 }}>
+              <ListItemIcon>
+                <ContrastIcon />
+              </ListItemIcon>
+              <ListItemText 
+                primary="High Contrast"
+                secondary={highContrast ? 'On' : 'Off'}
+              />
+              <Switch
+                checked={highContrast}
+                onChange={handleHighContrastToggle}
+                edge="end"
+              />
+            </ListItem>
+
+            {/* Time Format */}
+            <ListItem sx={{ pl: 4 }}>
+              <ListItemIcon>
+                <ClockIcon />
+              </ListItemIcon>
+              <ListItemText 
+                primary="24-Hour Time"
+                secondary={timeFormat === '24h' ? 'On' : 'Off'}
+              />
+              <Switch
+                checked={timeFormat === '24h'}
+                onChange={handleTimeFormatToggle}
+                edge="end"
+              />
+            </ListItem>
+          </List>
+        </Collapse>
+
+        {/* Current Time Display */}
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            p: 1,
+            mt: 1,
+            borderRadius: 1,
+            bgcolor: alpha(theme.palette.primary.main, 0.1),
+          }}
+        >
+          <ClockIcon sx={{ mr: 1, fontSize: '1rem', color: 'primary.main' }} />
+          <Typography variant="body2" color="primary">
+            {currentTime}
+          </Typography>
+        </Box>
+
+        <Button
+          fullWidth
+          variant="outlined"
+          color="error"
+          startIcon={<LogoutIcon />}
+          onClick={handleLogout}
+          sx={{
+            mt: 2,
+            borderRadius: 2,
+            justifyContent: 'flex-start',
+            px: 2,
+            py: 1,
+            textTransform: 'none',
+            '&:hover': {
+              backgroundColor: theme.palette.error.main + '10',
+            },
+          }}
+        >
+          Logout
+        </Button>
       </Box>
     </Box>
   );

@@ -1,236 +1,348 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import {
   Box,
-  TextField,
-  Grid,
   Card,
   CardContent,
+  CardActions,
   Typography,
-  Button,
-  Chip,
+  TextField,
+  Select,
   MenuItem,
   FormControl,
   InputLabel,
-  Select,
+  Grid,
+  Button,
+  Chip,
   IconButton,
-  Tooltip,
+  InputAdornment,
+  Skeleton,
   useTheme,
+  alpha
 } from '@mui/material';
 import {
   Search as SearchIcon,
-  Sort as SortIcon,
-  FilterList as FilterIcon,
-  Info as InfoIcon,
+  Clear as ClearIcon,
+  AccessTime as TimeIcon,
+  CalendarToday as CalendarIcon,
+  AttachMoney as MoneyIcon,
+  CheckCircle as RequirementIcon,
+  ArrowUpward as SortAscIcon,
+  ArrowDownward as SortDescIcon
 } from '@mui/icons-material';
-import { LICENSE_TYPES } from '../../types/license';
+import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 
-const sortOptions = [
-  { value: 'name_asc', label: 'Name (A-Z)' },
-  { value: 'name_desc', label: 'Name (Z-A)' },
-  { value: 'fee_asc', label: 'Fee (Low to High)' },
-  { value: 'fee_desc', label: 'Fee (High to Low)' },
-  { value: 'duration_asc', label: 'Duration (Shortest to Longest)' },
-  { value: 'duration_desc', label: 'Duration (Longest to Shortest)' },
+// Import category-specific icons
+import {
+  LocalHospital as HealthcareIcon,
+  Engineering as EngineeringIcon,
+  Construction as ConstructionIcon,
+  Home as RealEstateIcon,
+  ContentCut as PersonalServicesIcon,
+  Business as BusinessIcon,
+  SportsBasketball as SportsIcon,
+  People as SocialServicesIcon,
+  Security as SecurityIcon,
+  More as OtherIcon
+} from '@mui/icons-material';
+
+interface License {
+  id: string;
+  name: string;
+  description: string;
+  fee: number;
+  category: string;
+  icon: string;
+  requirements?: string[];
+  processingTime?: string;
+  validityPeriod?: string;
+}
+
+const categoryIcons: { [key: string]: React.ReactElement } = {
+  Healthcare: <HealthcareIcon />,
+  Engineering: <EngineeringIcon />,
+  Construction: <ConstructionIcon />,
+  'Real Estate': <RealEstateIcon />,
+  'Personal Services': <PersonalServicesIcon />,
+  Business: <BusinessIcon />,
+  'Sports & Entertainment': <SportsIcon />,
+  'Social Services': <SocialServicesIcon />,
+  'Investigation & Security': <SecurityIcon />,
+  Other: <OtherIcon />
+};
+
+const LICENSE_CATEGORIES = [
+  'Healthcare',
+  'Engineering',
+  'Construction',
+  'Real Estate',
+  'Personal Services',
+  'Business',
+  'Sports & Entertainment',
+  'Social Services',
+  'Investigation & Security',
+  'Other'
 ];
 
-const LicenseSearch = () => {
+export default function LicenseSearch() {
   const theme = useTheme();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('name_asc');
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [filteredLicenses, setFilteredLicenses] = useState(Object.values(LICENSE_TYPES));
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  useEffect(() => {
-    const filtered = Object.values(LICENSE_TYPES).filter((license) => {
-      const matchesSearch = license.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        license.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesType = selectedTypes.length === 0 || selectedTypes.includes(license.code);
-      return matchesSearch && matchesType;
-    });
-
-    const sorted = [...filtered].sort((a, b) => {
-      switch (sortBy) {
-        case 'name_asc':
-          return a.name.localeCompare(b.name);
-        case 'name_desc':
-          return b.name.localeCompare(a.name);
-        case 'fee_asc':
-          return a.fee - b.fee;
-        case 'fee_desc':
-          return b.fee - a.fee;
-        case 'duration_asc':
-          return a.validityPeriod - b.validityPeriod;
-        case 'duration_desc':
-          return b.validityPeriod - a.validityPeriod;
-        default:
-          return 0;
+  const { data: licenses, isLoading, error } = useQuery<License[]>({
+    queryKey: ['licenses', searchTerm, selectedCategory, sortBy, sortOrder],
+    queryFn: async () => {
+      try {
+        const params = new URLSearchParams({
+          query: searchTerm,
+          category: selectedCategory,
+          sortBy,
+          sortOrder
+        });
+        const response = await fetch(`http://localhost:5001/api/licenses?${params}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('API Error:', errorText);
+          throw new Error(`Failed to fetch licenses: ${errorText}`);
+        }
+        const data = await response.json();
+        console.log('Fetched licenses:', data);
+        return data;
+      } catch (error) {
+        console.error('Fetch error:', error);
+        throw error;
       }
-    });
+    },
+    retry: 1
+  });
 
-    setFilteredLicenses(sorted);
-  }, [searchTerm, sortBy, selectedTypes]);
-
-  const handleTypeToggle = (code: string) => {
-    setSelectedTypes((prev) =>
-      prev.includes(code)
-        ? prev.filter((t) => t !== code)
-        : [...prev, code]
-    );
+  const handleSortChange = (newSortBy: string) => {
+    if (sortBy === newSortBy) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(newSortBy);
+      setSortOrder('asc');
+    }
   };
 
-  return (
-    <Box>
-      <Grid container spacing={3}>
-        {/* Search and Filters */}
-        <Grid item xs={12}>
-          <Card
-            elevation={0}
-            sx={{
-              mb: 3,
-              background: theme.palette.mode === 'dark'
-                ? 'linear-gradient(45deg, #1a237e11, #0d47a111)'
-                : 'linear-gradient(45deg, #e3f2fd, #bbdefb33)',
-            }}
-          >
+  const handleApplyNow = (license: License) => {
+    // Store the selected license in Redux
+    dispatch({
+      type: 'application/setSelectedLicense',
+      payload: license
+    });
+    // Navigate to the application form
+    navigate('/new-application');
+  };
+
+  const renderSkeleton = () => (
+    <Grid container spacing={3}>
+      {[...Array(6)].map((_, index) => (
+        <Grid item xs={12} sm={6} md={4} key={index}>
+          <Card>
             <CardContent>
-              <Grid container spacing={2} alignItems="center">
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    placeholder="Search licenses..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    InputProps={{
-                      startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <FormControl fullWidth>
-                    <InputLabel>Sort By</InputLabel>
-                    <Select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      startAdornment={<SortIcon sx={{ mr: 1, color: 'text.secondary' }} />}
-                    >
-                      {sortOptions.map((option) => (
-                        <MenuItem key={option.value} value={option.value}>
-                          {option.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    <FilterIcon sx={{ color: 'text.secondary' }} />
-                    {Object.values(LICENSE_TYPES).map((type) => (
-                      <Chip
-                        key={type.code}
-                        label={type.code}
-                        onClick={() => handleTypeToggle(type.code)}
-                        color={selectedTypes.includes(type.code) ? 'primary' : 'default'}
-                        sx={{
-                          '&:hover': {
-                            transform: 'translateY(-2px)',
-                            transition: 'transform 0.2s ease',
-                          },
-                        }}
-                      />
-                    ))}
-                  </Box>
-                </Grid>
-              </Grid>
+              <Skeleton variant="rectangular" height={40} />
+              <Skeleton variant="text" height={80} />
+              <Skeleton variant="text" width="60%" />
             </CardContent>
           </Card>
         </Grid>
+      ))}
+    </Grid>
+  );
 
-        {/* License Cards */}
-        {filteredLicenses.map((license) => (
-          <Grid item xs={12} md={6} key={license.id}>
-            <Card
-              sx={{
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                position: 'relative',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: theme.shadows[8],
-                },
-              }}
-            >
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <Typography variant="h6" gutterBottom>
-                    {license.name}
-                  </Typography>
-                  <Tooltip title="View Requirements">
-                    <IconButton size="small">
-                      <InfoIcon />
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography color="error" variant="h6">
+          Error loading licenses. Please try again later.
+        </Typography>
+        <Typography color="error" variant="body2">
+          {error instanceof Error ? error.message : 'Unknown error occurred'}
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" gutterBottom>
+          Professional License Search
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Search licenses..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: searchTerm && (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setSearchTerm('')}>
+                      <ClearIcon />
                     </IconButton>
-                  </Tooltip>
-                </Box>
-                <Typography variant="body2" color="text.secondary" paragraph>
-                  {license.description}
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                  <Chip
-                    label={`$${license.fee}`}
-                    size="small"
-                    color="primary"
-                    variant="outlined"
-                  />
-                  <Chip
-                    label={`${license.validityPeriod} months`}
-                    size="small"
-                    color="info"
-                    variant="outlined"
-                  />
-                  <Chip
-                    label={license.processingTime}
-                    size="small"
-                    color="secondary"
-                    variant="outlined"
-                  />
-                </Box>
-                <Typography variant="subtitle2" gutterBottom>
-                  Requirements:
-                </Typography>
-                <Box component="ul" sx={{ pl: 2, mt: 0 }}>
-                  {license.requirements.map((req, index) => (
-                    <Typography
-                      key={index}
-                      component="li"
-                      variant="body2"
-                      color="text.secondary"
-                    >
-                      {req}
-                    </Typography>
-                  ))}
-                </Box>
-              </CardContent>
-              <Box sx={{ p: 2, pt: 0 }}>
-                <Button
-                  variant="contained"
-                  fullWidth
+                  </InputAdornment>
+                )
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Category</InputLabel>
+              <Select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                label="Category"
+              >
+                <MenuItem value="">All Categories</MenuItem>
+                {LICENSE_CATEGORIES.map((category) => (
+                  <MenuItem key={category} value={category}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {categoryIcons[category]}
+                      {category}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Sort By</InputLabel>
+              <Select
+                value={sortBy}
+                onChange={(e) => handleSortChange(e.target.value)}
+                label="Sort By"
+              >
+                <MenuItem value="name">Name</MenuItem>
+                <MenuItem value="fee">Fee</MenuItem>
+                <MenuItem value="processingTime">Processing Time</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Box>
+
+      {isLoading ? (
+        renderSkeleton()
+      ) : licenses?.length === 0 ? (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Typography variant="h6" color="text.secondary">
+            No licenses found matching your criteria
+          </Typography>
+        </Box>
+      ) : (
+        <Grid container spacing={3}>
+          {licenses?.map((license: License) => (
+            <Grid item xs={12} sm={6} md={4} key={license.id}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Card
                   sx={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
                     '&:hover': {
-                      transform: 'translateY(-2px)',
-                      transition: 'transform 0.2s ease',
-                    },
+                      transform: 'translateY(-4px)',
+                      boxShadow: theme.shadows[8],
+                      backgroundColor: alpha(theme.palette.primary.main, 0.04)
+                    }
                   }}
                 >
-                  Apply Now
-                </Button>
-              </Box>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+                      {categoryIcons[license.category]}
+                      <Typography variant="h6" component="h2">
+                        {license.name}
+                      </Typography>
+                    </Box>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 2 }}
+                    >
+                      {license.description}
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                      <Chip
+                        icon={<MoneyIcon />}
+                        label={`$${license.fee}`}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
+                      {license.processingTime && (
+                        <Chip
+                          icon={<TimeIcon />}
+                          label={license.processingTime}
+                          size="small"
+                          color="info"
+                          variant="outlined"
+                        />
+                      )}
+                      {license.validityPeriod && (
+                        <Chip
+                          icon={<CalendarIcon />}
+                          label={license.validityPeriod}
+                          size="small"
+                          color="success"
+                          variant="outlined"
+                        />
+                      )}
+                    </Box>
+                    {license.requirements && (
+                      <Box sx={{ mt: 2 }}>
+                        <Typography variant="subtitle2" gutterBottom>
+                          Requirements:
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                          {license.requirements.map((req, index) => (
+                            <Chip
+                              key={index}
+                              icon={<RequirementIcon />}
+                              label={req}
+                              size="small"
+                              variant="outlined"
+                            />
+                          ))}
+                        </Box>
+                      </Box>
+                    )}
+                  </CardContent>
+                  <CardActions sx={{ p: 2, pt: 0 }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      fullWidth
+                      onClick={() => handleApplyNow(license)}
+                    >
+                      Apply Now
+                    </Button>
+                  </CardActions>
+                </Card>
+              </motion.div>
+            </Grid>
+          ))}
+        </Grid>
+      )}
     </Box>
   );
-};
-
-export default LicenseSearch; 
+} 

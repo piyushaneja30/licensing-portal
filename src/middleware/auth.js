@@ -4,22 +4,37 @@ import { Session } from '../models/Session.js';
 
 export const authenticateUser = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    
-    if (!token) {
+    console.log('Auth middleware - Headers:', req.headers);
+    const authHeader = req.headers.authorization;
+    console.log('Auth middleware - Authorization header:', authHeader);
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('Auth middleware - No Bearer token found');
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    // Verify token and check session validity
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const token = authHeader.split(' ')[1];
+    console.log('Auth middleware - Token:', token);
+
+    // Verify token is valid
     const session = await Session.findOne({ token, isValid: true });
+    console.log('Auth middleware - Session:', session);
 
     if (!session || session.expiresAt < new Date()) {
-      return res.status(401).json({ message: 'Session expired' });
+      console.log('Auth middleware - Invalid or expired session');
+      return res.status(401).json({ message: 'Session expired or invalid' });
     }
 
-    const user = await User.findById(decoded.userId);
+    // Verify JWT
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    console.log('Auth middleware - Decoded token:', decoded);
+
+    // Get user
+    const user = await User.findById(decoded.userId).select('-password');
+    console.log('Auth middleware - User:', user);
+
     if (!user) {
+      console.log('Auth middleware - User not found');
       return res.status(401).json({ message: 'User not found' });
     }
 
@@ -27,23 +42,23 @@ export const authenticateUser = async (req, res, next) => {
     session.lastActivity = new Date();
     await session.save();
 
+    // Attach user to request
     req.user = user;
-    req.session = session;
     next();
   } catch (error) {
-    console.error('Authentication error:', error);
-    res.status(401).json({ message: 'Invalid authentication token' });
+    console.error('Auth middleware - Error:', error);
+    res.status(401).json({ message: 'Invalid token' });
   }
 };
 
 export const isAdmin = async (req, res, next) => {
   try {
-    if (!req.user || req.user.role !== 'admin') {
+    if (req.user?.role !== 'admin') {
       return res.status(403).json({ message: 'Admin access required' });
     }
     next();
   } catch (error) {
-    console.error('Admin authorization error:', error);
+    console.error('Admin middleware error:', error);
     res.status(500).json({ message: 'Error checking admin status' });
   }
 }; 
