@@ -16,6 +16,11 @@ const initialState: ApplicationsState = {
   error: null,
 };
 
+interface ErrorPayload {
+  message?: string;
+  [key: string]: any;
+}
+
 const applicationsSlice = createSlice({
   name: 'application',
   initialState,
@@ -52,7 +57,12 @@ const applicationsSlice = createSlice({
         console.error('Reducer: fetchUserApplications.rejected');
         console.error('Error payload:', action.payload);
         state.loading = false;
-        state.error = action.payload as string;
+        const errorPayload = action.payload as ErrorPayload | string | null;
+        state.error = typeof errorPayload === 'string' 
+          ? errorPayload 
+          : errorPayload && typeof errorPayload === 'object' 
+            ? errorPayload.message || JSON.stringify(errorPayload)
+            : 'An error occurred while fetching applications';
       })
       // Fetch Application Details
       .addCase(fetchApplicationDetails.pending, (state) => {
@@ -65,7 +75,12 @@ const applicationsSlice = createSlice({
       })
       .addCase(fetchApplicationDetails.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        const errorPayload = action.payload as ErrorPayload | string | null;
+        state.error = typeof errorPayload === 'string' 
+          ? errorPayload 
+          : errorPayload && typeof errorPayload === 'object' 
+            ? errorPayload.message || JSON.stringify(errorPayload)
+            : 'An error occurred while fetching application details';
       })
       // Submit Application
       .addCase(submitApplication.pending, (state) => {
@@ -78,7 +93,12 @@ const applicationsSlice = createSlice({
       })
       .addCase(submitApplication.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        const errorPayload = action.payload as ErrorPayload | string | null;
+        state.error = typeof errorPayload === 'string' 
+          ? errorPayload 
+          : errorPayload && typeof errorPayload === 'object' 
+            ? errorPayload.message || JSON.stringify(errorPayload)
+            : 'An error occurred while submitting the application';
       })
       // Update Application
       .addCase(updateApplication.pending, (state) => {
@@ -94,7 +114,12 @@ const applicationsSlice = createSlice({
       })
       .addCase(updateApplication.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        const errorPayload = action.payload as ErrorPayload | string | null;
+        state.error = typeof errorPayload === 'string' 
+          ? errorPayload 
+          : errorPayload && typeof errorPayload === 'object' 
+            ? errorPayload.message || JSON.stringify(errorPayload)
+            : 'An error occurred while updating the application';
       });
   },
 });

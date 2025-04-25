@@ -143,6 +143,12 @@ const licenseApplicationSchema = new mongoose.Schema({
 // Update lastUpdated on every save
 licenseApplicationSchema.pre('save', function(next) {
   this.lastUpdated = new Date();
+  
+  // If status is being changed to submitted, set the submission date
+  if (this.isModified('status') && this.status === 'submitted' && !this.submissionDate) {
+    this.submissionDate = new Date();
+  }
+  
   next();
 });
 

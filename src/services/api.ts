@@ -62,33 +62,31 @@ api.interceptors.response.use(
 export const applicationApi = {
   getUserApplications: () => api.get<LicenseApplication[]>('/applications/user'),
   getApplicationDetails: (id: string) => api.get<LicenseApplication>(`/applications/${id}`),
-  submitApplication: async (data: Partial<LicenseApplication>) => {
-    console.log('=== API: Application Submission Started ===');
-    console.log('API: Request URL:', `${API_BASE_URL}/applications/create`);
-    console.log('API: Request Headers:', {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
-    });
-    console.log('API: Request Body:', JSON.stringify(data, null, 2));
-    
+  createApplication: async (data: Partial<LicenseApplication>) => {
+    console.log('=== API: Application Creation Started ===');
     try {
       const response = await api.post<LicenseApplication>('/applications/create', data);
-      console.log('API: Successful Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        data: response.data
-      });
+      const applicationId = response.data._id || response.data.id;
+      console.log('Application created with ID:', applicationId);
       return response;
-    } catch (error: any) {
-      console.error('=== API: Submission Error ===');
-      console.error('API: Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
+    } catch (error) {
+      console.error('Error creating application:', error);
       throw error;
-    } finally {
-      console.log('=== API: Application Submission Ended ===');
+    }
+  },
+  submitApplication: async (applicationId: string) => {
+    console.log('=== API: Application Submission Started ===');
+    console.log('Submitting application with ID:', applicationId);
+    try {
+      if (!applicationId) {
+        throw new Error('Application ID is required for submission');
+      }
+      const response = await api.post<LicenseApplication>(`/applications/${applicationId}/submit`);
+      console.log('API: Submission Response:', response.data);
+      return response;
+    } catch (error) {
+      console.error('Error submitting application:', error);
+      throw error;
     }
   },
   updateApplication: (id: string, data: Partial<LicenseApplication>) => api.put<LicenseApplication>(`/applications/${id}`, data),
