@@ -326,8 +326,7 @@ const ApplicationFlow: React.FC = () => {
 
         const applicationData: Partial<LicenseApplication> = {
           licenseTypeId: selectedLicense?.id || 'default_license',
-          status: 'pending',
-          submittedDate: new Date().toISOString(),
+          status: 'draft', // Start as draft
           personalInfo: {
             firstName: values.firstName || '',
             lastName: values.lastName || '',
@@ -360,7 +359,7 @@ const ApplicationFlow: React.FC = () => {
             employer: work.employer || '',
             position: work.position || '',
             startDate: work.startDate ? new Date(work.startDate) : new Date(),
-            endDate: work.endDate ? new Date(work.endDate) : null,
+            endDate: work.endDate ? new Date(work.endDate) : new Date(), // Set to current date if null
             responsibilities: work.responsibilities || '',
             supervisor: work.supervisor || '',
             supervisorEmail: work.supervisorEmail || '',
@@ -370,46 +369,36 @@ const ApplicationFlow: React.FC = () => {
             state: work.state || '',
             zipCode: work.zipCode || ''
           })) || [],
-          references: values.references?.map(ref => ({
-            name: ref.name || '',
-            email: ref.email || '',
-            phone: ref.phone || '',
-            relationship: ref.relationship || '',
-            position: ref.position || '',
-            institution: ref.institution || '',
-            address: ref.address || '',
-            city: ref.city || '',
-            state: ref.state || '',
-            zipCode: ref.zipCode || '',
-            yearsKnown: ref.yearsKnown || ''
-          })) || []
         };
         
-        console.log('Prepared application data:', JSON.stringify(applicationData, null, 2));
-        console.log('Dispatching submitApplication action...');
+        console.log('Creating application with data:', JSON.stringify(applicationData, null, 2));
         
-        const response = await dispatch(submitApplication(applicationData));
-        console.log('Submission response:', JSON.stringify(response, null, 2));
-        
-        if (!response.payload || response.type.endsWith('/rejected')) {
-          console.error('Submission failed:', response);
-          throw new Error('Application submission failed');
+        // First create the application
+        const createResponse = await applicationApi.createApplication(applicationData);
+        if (!createResponse.data || (!createResponse.data.id && !createResponse.data._id)) {
+          throw new Error('Failed to create application: No application ID received');
         }
+        console.log('Application created:', createResponse.data);
         
-        console.log('Submission successful, showing success notification');
+        // Then submit it using the received ID
+        const applicationId = createResponse.data._id || createResponse.data.id;
+        const submitResponse = await applicationApi.submitApplication(applicationId);
+        if (!submitResponse.data || submitResponse.data.status !== 'submitted') {
+          throw new Error('Application submission failed: Status not updated to submitted');
+        }
+        console.log('Application submitted:', submitResponse.data);
+        
         setShowSuccess(true);
 
         // Extract application number and navigate
-        const applicationNumber = (response.payload as LicenseApplication).applicationNumber;
+        const applicationNumber = submitResponse.data.applicationNumber;
         console.log('Navigating to success page with application number:', applicationNumber);
         navigate(`/application-success/${applicationNumber}`);
       } catch (error) {
         console.error('=== Submission Error ===');
         console.error('Error details:', error);
-        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
         setShowError(true);
       } finally {
-        console.log('Setting processingApplication to false');
         setProcessingApplication(false);
         console.log('=== Formik onSubmit Ended ===');
       }

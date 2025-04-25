@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -9,6 +9,11 @@ import {
   Fade,
   Divider,
   useTheme,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import Timeline from '@mui/lab/Timeline';
 import TimelineItem from '@mui/lab/TimelineItem';
@@ -23,6 +28,9 @@ import {
   Dashboard as DashboardIcon,
   Assignment as AssignmentIcon,
   Done as DoneIcon,
+  ExpandMore as ExpandMoreIcon,
+  Share as ShareIcon,
+  ContentCopy as ContentCopyIcon,
 } from '@mui/icons-material';
 import confetti from 'canvas-confetti';
 
@@ -30,6 +38,7 @@ const ApplicationSuccess: React.FC = () => {
   const { applicationNumber } = useParams<{ applicationNumber: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
+  const [showCopiedAlert, setShowCopiedAlert] = useState(false);
 
   const isDarkMode = theme.palette.mode === 'dark';
   
@@ -66,7 +75,17 @@ const ApplicationSuccess: React.FC = () => {
     }, 50);
 
     return () => clearInterval(interval);
-  }, [confettiColors]); // Only depend on memoized colors
+  }, [confettiColors]);
+
+  const handleShare = async () => {
+    const shareText = `My license application (${applicationNumber}) has been submitted successfully!`;
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setShowCopiedAlert(true);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
 
   return (
     <Container maxWidth="md">
@@ -109,8 +128,8 @@ const ApplicationSuccess: React.FC = () => {
             <CheckCircleIcon 
               sx={{ 
                 fontSize: { xs: 60, md: 80 },
-                color: 'success.main',
-                filter: 'drop-shadow(0 4px 8px rgba(0, 200, 83, 0.3))',
+                color: 'primary.main',
+                filter: 'drop-shadow(0 4px 8px rgba(25, 118, 210, 0.3))',
                 animation: 'pulse 2s infinite',
                 '@keyframes pulse': {
                   '0%': { transform: 'scale(1)', opacity: 1 },
@@ -159,6 +178,55 @@ const ApplicationSuccess: React.FC = () => {
           </Typography>
           
           <Divider sx={{ my: 4 }} />
+
+          <Accordion 
+            sx={{ 
+              mb: 4,
+              background: 'transparent',
+              boxShadow: 'none',
+              '&:before': {
+                display: 'none',
+              },
+              '& .MuiAccordionSummary-root': {
+                background: theme => theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : 'rgba(0, 0, 0, 0.02)',
+                borderRadius: 1,
+              }
+            }}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMoreIcon />}
+              sx={{ 
+                '& .MuiAccordionSummary-content': {
+                  justifyContent: 'center',
+                }
+              }}
+            >
+              <Typography variant="h6" color="primary">
+                What's Next?
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box sx={{ textAlign: 'left', px: 2 }}>
+                <Typography variant="body1" paragraph>
+                  1. <strong>Application Review:</strong> Your application will be reviewed by our licensing board within 5-7 business days.
+                </Typography>
+                <Typography variant="body1" paragraph>
+                  2. <strong>Document Verification:</strong> We may contact you if additional documents are required.
+                </Typography>
+                <Typography variant="body1" paragraph>
+                  3. <strong>Status Updates:</strong> You'll receive email notifications about your application status.
+                </Typography>
+                <Typography variant="body1" paragraph>
+                  4. <strong>Final Decision:</strong> Once reviewed, you'll receive a decision via email.
+                </Typography>
+                <Typography variant="body1">
+                  5. <strong>License Issuance:</strong> If approved, your license will be issued and mailed to your registered address.
+                </Typography>
+              </Box>
+            </AccordionDetails>
+          </Accordion>
 
           <Timeline position="alternate" sx={{ mb: 4 }}>
             <TimelineItem>
@@ -248,24 +316,43 @@ const ApplicationSuccess: React.FC = () => {
                 '@keyframes shimmer': {
                   '100%': {
                     left: '100%',
-                  },
-                },
+                  }
+                }
               }}
             >
-              Track Application
+              Track Status
             </Button>
+
+            <Button
+              variant="outlined"
+              size="large"
+              onClick={handleShare}
+              startIcon={<ContentCopyIcon />}
+              sx={{
+                borderColor: 'primary.main',
+                color: 'primary.main',
+                '&:hover': {
+                  borderColor: 'primary.dark',
+                  backgroundColor: 'primary.light',
+                  color: 'primary.dark',
+                }
+              }}
+            >
+              Share Status
+            </Button>
+
             <Button
               variant="outlined"
               size="large"
               onClick={() => navigate('/dashboard')}
               startIcon={<DashboardIcon />}
               sx={{
-                borderWidth: 2,
+                borderColor: 'secondary.main',
+                color: 'secondary.main',
                 '&:hover': {
-                  borderWidth: 2,
-                  background: theme => `linear-gradient(45deg, 
-                    ${theme.palette.primary.main}11, 
-                    ${theme.palette.primary.light}11)`,
+                  borderColor: 'secondary.dark',
+                  backgroundColor: 'secondary.light',
+                  color: 'secondary.dark',
                 }
               }}
             >
@@ -274,6 +361,21 @@ const ApplicationSuccess: React.FC = () => {
           </Box>
         </Paper>
       </Fade>
+
+      <Snackbar
+        open={showCopiedAlert}
+        autoHideDuration={3000}
+        onClose={() => setShowCopiedAlert(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowCopiedAlert(false)} 
+          severity="success" 
+          sx={{ width: '100%' }}
+        >
+          Application status copied to clipboard!
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

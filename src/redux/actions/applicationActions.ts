@@ -80,10 +80,15 @@ export const submitApplication = createAsyncThunk(
         return rejectWithValue('No authentication token found');
       }
 
-      console.log('Calling API submitApplication with data:', JSON.stringify(applicationData, null, 2));
-      const response = await applicationApi.submitApplication(applicationData);
-      console.log('API Response:', JSON.stringify(response.data, null, 2));
-      return response.data;
+      // First create the application
+      const createResponse = await applicationApi.createApplication(applicationData);
+      console.log('Application created:', createResponse.data);
+
+      // Then submit it
+      const submitResponse = await applicationApi.submitApplication(createResponse.data.id);
+      console.log('Application submitted:', submitResponse.data);
+
+      return submitResponse.data;
     } catch (error) {
       console.error('=== Redux Action: submitApplication Error ===');
       const apiError = error as ApiError;
@@ -92,8 +97,6 @@ export const submitApplication = createAsyncThunk(
         response: apiError.response?.data
       });
       return rejectWithValue(apiError.response?.data || apiError.message || 'Failed to submit application');
-    } finally {
-      console.log('=== Redux Action: submitApplication Ended ===');
     }
   }
 );

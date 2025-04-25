@@ -82,8 +82,13 @@ const Dashboard = () => {
         }
       } catch (err) {
         console.error('Error fetching applications:', err);
-        setFetchError(err.message || 'Failed to fetch applications');
-        if (err.message === 'No authentication token found' || err.message === 'Invalid authentication token') {
+        const errorMessage = typeof err === 'string' 
+          ? err 
+          : err && typeof err === 'object' 
+            ? err.message || JSON.stringify(err)
+            : 'Failed to fetch applications';
+        setFetchError(errorMessage);
+        if (errorMessage.includes('No authentication token found') || errorMessage.includes('Invalid authentication token')) {
           navigate('/login');
         }
       }
@@ -260,9 +265,14 @@ const Dashboard = () => {
               )}
             </Box>
 
-            {(error || fetchError) && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {error || fetchError}
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {typeof error === 'string' ? error : JSON.stringify(error)}
+              </Alert>
+            )}
+            {fetchError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {typeof fetchError === 'string' ? fetchError : JSON.stringify(fetchError)}
               </Alert>
             )}
 

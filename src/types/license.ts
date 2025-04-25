@@ -66,11 +66,12 @@ export interface Document {
 }
 
 export interface LicenseApplication {
-  id: string;
+  id?: string;      // For client-side ID
+  _id?: string;     // For MongoDB ID
   applicationNumber: string;
   userId: string;
   licenseTypeId: string;
-  status: 'draft' | 'pending' | 'approved' | 'rejected';
+  status: 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected';
   submittedDate: string;
   personalInfo: PersonalInfo;
   education: Education[];
