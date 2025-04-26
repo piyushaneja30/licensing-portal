@@ -1,69 +1,102 @@
-import mongoose from 'mongoose';
-import { LICENSE_TYPES } from '../constants/licenseTypes.js';
+import { Model, DataTypes, Optional } from 'sequelize';
+import { sequelize } from '../config/database';
+import User from './User';
 
-const licenseApplicationSchema = new mongoose.Schema({
-  applicationNumber: {
-    type: String,
-    unique: true,
-    required: true,
-    default: function() {
-      const year = new Date().getFullYear();
-      const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-      return `APP-${year}-${random}`;
-    }
-  },
-  userId: {
-    type: String,
-    required: true
-  },
-  licenseTypeId: {
-    type: String,
-    required: true
-  },
-  personalInfo: {
-    firstName: { type: String, default: null },
-    lastName: { type: String, default: null },
-    email: { type: String, default: null },
-    phone: { type: String, default: null },
-    address: { type: String, default: null },
-    city: { type: String, default: null },
-    state: { type: String, default: null },
-    zipCode: { type: String, default: null }
-  },
-  education: [{
-    institution: { type: String, default: null },
-    degree: { type: String, default: null },
-    graduationYear: { type: Number, default: null },
-    field: { type: String, default: null }
-  }],
-  documents: [{
-    name: { type: String, default: null },
-    type: { type: String, default: null },
-    url: { type: String, default: null },
-    uploadDate: { type: Date, default: null },
+interface LicenseApplicationAttributes {
+  id: number;
+  userId: number;
+  licenseType: string;
+  status: 'pending' | 'approved' | 'rejected' | 'in_review';
+  applicationDate: Date;
+  documents: string[];
+  notes?: string;
+  reviewDate?: Date;
+  reviewerId?: number;
+  reviewNotes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+interface LicenseApplicationCreationAttributes extends Optional<LicenseApplicationAttributes, 'id'> {}
+
+class LicenseApplication extends Model<LicenseApplicationAttributes, LicenseApplicationCreationAttributes> implements LicenseApplicationAttributes {
+  public id!: number;
+  public userId!: number;
+  public licenseType!: string;
+  public status!: 'pending' | 'approved' | 'rejected' | 'in_review';
+  public applicationDate!: Date;
+  public documents!: string[];
+  public notes?: string;
+  public reviewDate?: Date;
+  public reviewerId?: number;
+  public reviewNotes?: string;
+  public readonly createdAt!: Date;
+  public readonly updatedAt!: Date;
+}
+
+LicenseApplication.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: User,
+        key: 'id',
+      },
+    },
+    licenseType: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     status: {
-      type: String,
-      enum: ['pending', 'approved', 'rejected'],
-      default: 'pending'
-    }
-  }],
-  status: {
-    type: String,
-    enum: ['draft', 'submitted', 'under_review', 'approved', 'rejected'],
-    default: 'draft'
+      type: DataTypes.ENUM('pending', 'approved', 'rejected', 'in_review'),
+      defaultValue: 'pending',
+    },
+    applicationDate: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    documents: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: [],
+    },
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    reviewDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    reviewerId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: User,
+        key: 'id',
+      },
+    },
+    reviewNotes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
   },
-  submissionDate: { type: Date, default: null },
-  lastUpdated: {
-    type: Date,
-    default: Date.now
-  },
-  reviewNotes: [{
-    date: { type: Date, default: null },
-    reviewer: { type: String, default: null },
-    note: { type: String, default: null },
-    status: { type: String, default: null }
-  }]
-});
+  {
+    sequelize,
+    modelName: 'LicenseApplication',
+    tableName: 'license_applications',
+  }
+);
 
-// Create the model
-export const LicenseApplication = mongoose.model('LicenseApplication', licenseApplicationSchema); 
+// Define associations
+LicenseApplication.belongsTo(User, { foreignKey: 'userId', as: 'applicant' });
+LicenseApplication.belongsTo(User, { foreignKey: 'reviewerId', as: 'reviewer' });
+
+export default LicenseApplication; 
