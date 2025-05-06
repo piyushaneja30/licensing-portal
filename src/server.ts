@@ -1,16 +1,15 @@
 import express from 'express';
 import cors from 'cors';
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import licenseApplicationRoutes from './routes/licenseApplicationRoutes.js';
-import licenseRoutes from './routes/licenseRoutes.js';
-import authRoutes from './routes/authRoutes.js';
+import sequelize from './config/database.js';
+import User from './models/User.js';
+import License from './models/License.js';
+import LicenseApplication from './models/LicenseApplication.js';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5001;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/licensing-portal';
+const port = process.env.PORT || 5001;
 
 // CORS configuration
 app.use(cors({
@@ -31,10 +30,33 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
+// Initialize database connection
+async function initializeDatabase() {
+  try {
+    await sequelize.authenticate();
+    console.log('Database connection established successfully.');
+
+    // Sync all models
+    await sequelize.sync({ alter: true });
+    console.log('Database models synchronized successfully.');
+  } catch (error) {
+    console.error('Unable to connect to the database:', error);
+    process.exit(1);
+  }
+}
+
+// Initialize database
+initializeDatabase();
+
+// Import routes
+import authRoutes from './routes/authRoutes.js';
+import licenseRoutes from './routes/licenseRoutes.js';
+import licenseApplicationRoutes from './routes/licenseApplicationRoutes.js';
+
+// Use routes
 app.use('/api/auth', authRoutes);
-app.use('/api/applications', licenseApplicationRoutes);
 app.use('/api/licenses', licenseRoutes);
+app.use('/api/applications', licenseApplicationRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -45,14 +67,6 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// Connect to MongoDB
-mongoose.connect(MONGODB_URI)
-  .then(() => {
-    console.log('Connected to MongoDB');
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
-  })
-  .catch((error) => {
-    console.error('Error connecting to MongoDB:', error);
-  }); 
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+}); 

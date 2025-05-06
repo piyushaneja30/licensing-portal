@@ -1,69 +1,89 @@
-import mongoose from 'mongoose';
-import { LICENSE_TYPES } from '../constants/licenseTypes.js';
+import { Model, DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
+import User from './User.js';
 
-const licenseApplicationSchema = new mongoose.Schema({
-  applicationNumber: {
-    type: String,
-    unique: true,
-    required: true,
-    default: function() {
-      const year = new Date().getFullYear();
-      const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
-      return `APP-${year}-${random}`;
-    }
-  },
-  userId: {
-    type: String,
-    required: true
-  },
-  licenseTypeId: {
-    type: String,
-    required: true
-  },
-  personalInfo: {
-    firstName: { type: String, default: null },
-    lastName: { type: String, default: null },
-    email: { type: String, default: null },
-    phone: { type: String, default: null },
-    address: { type: String, default: null },
-    city: { type: String, default: null },
-    state: { type: String, default: null },
-    zipCode: { type: String, default: null }
-  },
-  education: [{
-    institution: { type: String, default: null },
-    degree: { type: String, default: null },
-    graduationYear: { type: Number, default: null },
-    field: { type: String, default: null }
-  }],
-  documents: [{
-    name: { type: String, default: null },
-    type: { type: String, default: null },
-    url: { type: String, default: null },
-    uploadDate: { type: Date, default: null },
+class LicenseApplication extends Model {
+  public id!: number;
+  public userId!: number;
+  public licenseType!: string;
+  public status!: string;
+  public applicationDate!: Date;
+  public reviewDate?: Date;
+  public documents!: any[];
+  public notes?: string;
+  public personalInfo!: any;
+  public education!: any;
+  public reviewNotes!: any[];
+  public applicationNumber!: string;
+  public readonly createdAt!: Date;
+  public readonly updatedAt!: Date;
+}
+
+LicenseApplication.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    licenseType: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     status: {
-      type: String,
-      enum: ['pending', 'approved', 'rejected'],
-      default: 'pending'
-    }
-  }],
-  status: {
-    type: String,
-    enum: ['draft', 'submitted', 'under_review', 'approved', 'rejected'],
-    default: 'draft'
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'draft',
+    },
+    applicationDate: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    reviewDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    documents: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: [],
+    },
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    personalInfo: {
+      type: DataTypes.JSON,
+      allowNull: false,
+    },
+    education: {
+      type: DataTypes.JSON,
+      allowNull: false,
+    },
+    reviewNotes: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: [],
+    },
+    applicationNumber: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
   },
-  submissionDate: { type: Date, default: null },
-  lastUpdated: {
-    type: Date,
-    default: Date.now
-  },
-  reviewNotes: [{
-    date: { type: Date, default: null },
-    reviewer: { type: String, default: null },
-    note: { type: String, default: null },
-    status: { type: String, default: null }
-  }]
-});
+  {
+    sequelize,
+    modelName: 'LicenseApplication',
+    tableName: 'license_applications',
+  }
+);
 
-// Create the model
-export const LicenseApplication = mongoose.model('LicenseApplication', licenseApplicationSchema); 
+LicenseApplication.belongsTo(User, { foreignKey: 'userId' });
+User.hasMany(LicenseApplication, { foreignKey: 'userId' });
+
+export default LicenseApplication; 

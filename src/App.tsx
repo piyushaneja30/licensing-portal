@@ -18,15 +18,17 @@ import Settings from './components/settings/Settings';
 import HelpSupport from './components/help/HelpSupport';
 import MyLicenses from './components/license/MyLicenses';
 import LandingPage from './components/LandingPage';
+import AdminLicenseManagement from './components/admin/AdminLicenseManagement';
 import { RootState } from './store';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requireAdmin?: boolean;
 }
 
 const App = () => {
   const [mode, setMode] = useState<'light' | 'dark'>('light');
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
   
   // Create a client
   const queryClient = useMemo(() => new QueryClient({
@@ -67,8 +69,14 @@ const App = () => {
     [mode]
   );
 
-  const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-    return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+  const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin }) => {
+    if (!isAuthenticated) {
+      return <Navigate to="/login" />;
+    }
+    if (requireAdmin && user?.role !== 'admin') {
+      return <Navigate to="/dashboard" />;
+    }
+    return <>{children}</>;
   };
 
   return (
@@ -99,6 +107,15 @@ const App = () => {
                         <Route path="/settings" element={<Settings />} />
                         <Route path="/support" element={<HelpSupport />} />
                         <Route path="/licenses" element={<MyLicenses />} />
+                        {/* Admin routes */}
+                        <Route 
+                          path="/admin/licenses" 
+                          element={
+                            <ProtectedRoute requireAdmin>
+                              <AdminLicenseManagement />
+                            </ProtectedRoute>
+                          } 
+                        />
                         <Route path="*" element={<Navigate to="/dashboard" replace />} />
                       </Routes>
                     </DashboardLayout>

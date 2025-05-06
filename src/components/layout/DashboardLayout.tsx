@@ -45,6 +45,8 @@ import {
   ExpandMore as ExpandMoreIcon,
   Palette as PaletteIcon,
   AccessTime as ClockIcon,
+  CardMembership as LicenseIcon,
+  AccountCircle as ProfileIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
@@ -61,12 +63,19 @@ interface DashboardLayoutProps {
 
 const menuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-  { text: 'My Licenses', icon: <DescriptionIcon />, path: '/licenses' },
+  { text: 'My Licenses', icon: <LicenseIcon />, path: '/licenses' },
+  { text: 'New Application', icon: <AddIcon />, path: '/new-application' },
   { text: 'License Search', icon: <SearchIcon />, path: '/license-search' },
+  { text: 'Application History', icon: <HistoryIcon />, path: '/history' },
+];
+
+// Admin menu items
+const adminMenuItems = [
+  { text: 'Manage Licenses', icon: <LicenseIcon />, path: '/admin/licenses' },
 ];
 
 const bottomMenuItems = [
-  { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
+  { text: 'Profile', icon: <ProfileIcon />, path: '/profile' },
   { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   { text: 'Help & Support', icon: <HelpIcon />, path: '/support' },
 ];
@@ -194,42 +203,73 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       </Box>
       <Divider />
       <List>
+        {/* Regular menu items */}
         {menuItems.map((item) => (
-          <ListItem
-            disablePadding
+          <ListItemButton
             key={item.text}
+            selected={location.pathname === item.path}
+            onClick={() => navigate(item.path)}
             sx={{
+              borderRadius: 1,
               mb: 0.5,
+              '&.Mui-selected': {
+                backgroundColor: 'primary.main',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'primary.dark',
+                },
+                '& .MuiListItemIcon-root': {
+                  color: 'white',
+                },
+              },
             }}
           >
-            <ListItemButton
-              onClick={() => {
-                navigate(item.path);
-                setMobileOpen(false);
-              }}
-              selected={location.pathname === item.path}
-              sx={{
-                borderRadius: '0 24px 24px 0',
-                mr: 2,
-                '&.Mui-selected': {
-                  backgroundColor: theme.palette.primary.main + '20',
-                  '&:hover': {
-                    backgroundColor: theme.palette.primary.main + '30',
-                  },
-                },
-              }}
+            <ListItemIcon sx={{ minWidth: 40 }}>
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText primary={item.text} />
+          </ListItemButton>
+        ))}
+
+        {/* Admin menu items */}
+        {user?.role === 'admin' && (
+          <>
+            <Divider sx={{ my: 2 }} />
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              sx={{ px: 3, py: 1 }}
             >
-              <ListItemIcon
+              Admin
+            </Typography>
+            {adminMenuItems.map((item) => (
+              <ListItemButton
+                key={item.text}
+                selected={location.pathname === item.path}
+                onClick={() => navigate(item.path)}
                 sx={{
-                  color: location.pathname === item.path ? theme.palette.primary.main : 'inherit',
+                  borderRadius: 1,
+                  mb: 0.5,
+                  '&.Mui-selected': {
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: 'primary.dark',
+                    },
+                    '& .MuiListItemIcon-root': {
+                      color: 'white',
+                    },
+                  },
                 }}
               >
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText primary={item.text} />
+              </ListItemButton>
+            ))}
+          </>
+        )}
       </List>
       <Box sx={{ flexGrow: 1 }} />
       <Divider />

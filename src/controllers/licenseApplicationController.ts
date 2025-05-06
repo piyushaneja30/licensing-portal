@@ -1,14 +1,19 @@
 import { Response } from 'express';
 import { Request } from '../types/express.js';
-import { LicenseApplication } from '../models/LicenseApplication.js';
+import LicenseApplication from '../models/LicenseApplication.js';
+import User from '../models/User.js';
 
 export const licenseApplicationController = {
   // Get all applications (admin only)
   getAllApplications: async (req: Request, res: Response): Promise<void> => {
     try {
-      const applications = await LicenseApplication.find()
-        .populate('userId', 'email profile')
-        .sort({ createdAt: -1 });
+      const applications = await LicenseApplication.findAll({
+        include: [{
+          model: User,
+          attributes: ['id', 'email', 'profile']
+        }],
+        order: [['createdAt', 'DESC']]
+      });
       
       res.json(applications);
     } catch (error) {
@@ -25,18 +30,28 @@ export const licenseApplicationController = {
         return;
       }
 
+      console.log('Create Application - Request Body:', req.body);
+
+      const { licenseType, licenseTypeId } = req.body;
+      const finalLicenseType = licenseType || licenseTypeId;
+      if (!finalLicenseType) {
+        res.status(400).json({ message: 'licenseType is required' });
+        return;
+      }
+
+      // Generate a unique application number
+      const applicationNumber = `APP-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+
       const applicationData = {
         ...req.body,
+        licenseType: finalLicenseType,
         userId: req.user.id,
         status: 'submitted',
-        submissionDate: new Date(),
-        lastUpdated: new Date(),
+        applicationDate: new Date(),
+        applicationNumber,
       };
 
-      // Create and save the application
-      const application = new LicenseApplication(applicationData);
-      await application.save();
-
+      const application = await LicenseApplication.create(applicationData);
       res.status(201).json(application);
     } catch (error) {
       console.error('Error creating application:', error);
@@ -50,8 +65,12 @@ export const licenseApplicationController = {
   // Get application by ID
   getById: async (req: Request, res: Response): Promise<void> => {
     try {
-      const application = await LicenseApplication.findById(req.params.id)
-        .populate('userId', 'email profile');
+      const application = await LicenseApplication.findByPk(req.params.id, {
+        include: [{
+          model: User,
+          attributes: ['id', 'email', 'profile']
+        }]
+      });
       
       if (!application) {
         res.status(404).json({ message: 'Application not found' });
@@ -68,22 +87,19 @@ export const licenseApplicationController = {
   // Get user's applications
   getUserApplications: async (req: Request, res: Response): Promise<void> => {
     try {
-      console.log('Debug: Getting user applications, user:', req.user);
-
       if (!req.user?.id) {
-        console.log('Debug: No user ID found in request');
         res.status(401).json({ message: 'Authentication required' });
         return;
       }
 
-      console.log('Debug: Searching for applications with userId:', req.user.id);
-      const applications = await LicenseApplication.find({ userId: req.user.id })
-        .sort({ submissionDate: -1 });
+      const applications = await LicenseApplication.findAll({
+        where: { userId: req.user.id },
+        order: [['applicationDate', 'DESC']]
+      });
       
-      console.log('Debug: Found applications:', applications.length);
       res.json(applications);
     } catch (error) {
-      console.error('Debug: Error fetching user applications:', error);
+      console.error('Error fetching user applications:', error);
       res.status(500).json({ 
         message: 'Error fetching user applications',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -99,20 +115,20 @@ export const licenseApplicationController = {
         return;
       }
 
-      const application = await LicenseApplication.findOneAndUpdate(
-        { _id: req.params.id, userId: req.user.id },
-        { 
-          $set: { 
-            personalInfo: req.body,
-            lastUpdated: new Date()
-          }
-        },
-        { new: true }
-      );
+      const application = await LicenseApplication.findOne({
+        where: { id: req.params.id, userId: req.user.id }
+      });
+
       if (!application) {
         res.status(404).json({ message: 'Application not found' });
         return;
       }
+
+      await application.update({
+        personalInfo: req.body,
+        updatedAt: new Date()
+      });
+
       res.json(application);
     } catch (error) {
       res.status(500).json({ message: 'Error updating personal information', error });
@@ -127,20 +143,20 @@ export const licenseApplicationController = {
         return;
       }
 
-      const application = await LicenseApplication.findOneAndUpdate(
-        { _id: req.params.id, userId: req.user.id },
-        { 
-          $set: { 
-            education: req.body,
-            lastUpdated: new Date()
-          }
-        },
-        { new: true }
-      );
+      const application = await LicenseApplication.findOne({
+        where: { id: req.params.id, userId: req.user.id }
+      });
+
       if (!application) {
         res.status(404).json({ message: 'Application not found' });
         return;
       }
+
+      await application.update({
+        education: req.body,
+        updatedAt: new Date()
+      });
+
       res.json(application);
     } catch (error) {
       res.status(500).json({ message: 'Error updating education', error });
@@ -155,24 +171,27 @@ export const licenseApplicationController = {
         return;
       }
 
-      const application = await LicenseApplication.findOneAndUpdate(
-        { _id: req.params.id, userId: req.user.id },
-        { 
-          $push: { 
-            documents: {
-              ...req.body,
-              uploadDate: new Date(),
-              status: 'pending'
-            }
-          },
-          $set: { lastUpdated: new Date() }
-        },
-        { new: true }
-      );
+      const application = await LicenseApplication.findOne({
+        where: { id: req.params.id, userId: req.user.id }
+      });
+
       if (!application) {
         res.status(404).json({ message: 'Application not found' });
         return;
       }
+
+      const documents = application.documents || [];
+      documents.push({
+        ...req.body,
+        uploadDate: new Date(),
+        status: 'pending'
+      });
+
+      await application.update({
+        documents,
+        updatedAt: new Date()
+      });
+
       res.json(application);
     } catch (error) {
       res.status(500).json({ message: 'Error adding document', error });
@@ -187,21 +206,20 @@ export const licenseApplicationController = {
         return;
       }
 
-      const application = await LicenseApplication.findOneAndUpdate(
-        { _id: req.params.id, userId: req.user.id },
-        { 
-          $set: { 
-            status: 'submitted',
-            submissionDate: new Date(),
-            lastUpdated: new Date()
-          }
-        },
-        { new: true }
-      );
+      const application = await LicenseApplication.findOne({
+        where: { id: req.params.id, userId: req.user.id }
+      });
+
       if (!application) {
         res.status(404).json({ message: 'Application not found' });
         return;
       }
+
+      await application.update({
+        status: 'submitted',
+        updatedAt: new Date()
+      });
+
       res.json(application);
     } catch (error) {
       res.status(500).json({ message: 'Error submitting application', error });
@@ -217,26 +235,27 @@ export const licenseApplicationController = {
       }
 
       const { status, note } = req.body;
-      const application = await LicenseApplication.findByIdAndUpdate(
-        req.params.id,
-        { 
-          $set: { status },
-          $push: { 
-            reviewNotes: {
-              date: new Date(),
-              reviewer: req.user.id,
-              note,
-              status
-            }
-          },
-          lastUpdated: new Date()
-        },
-        { new: true }
-      );
+      const application = await LicenseApplication.findByPk(req.params.id);
+
       if (!application) {
         res.status(404).json({ message: 'Application not found' });
         return;
       }
+
+      const reviewNotes = application.reviewNotes || [];
+      reviewNotes.push({
+        date: new Date(),
+        reviewer: req.user.id,
+        note,
+        status
+      });
+
+      await application.update({
+        status,
+        reviewNotes,
+        updatedAt: new Date()
+      });
+
       res.json(application);
     } catch (error) {
       res.status(500).json({ message: 'Error updating application status', error });
@@ -251,15 +270,21 @@ export const licenseApplicationController = {
         return;
       }
 
-      const application = await LicenseApplication.findOneAndDelete({
-        _id: req.params.id,
-        userId: req.user.id,
-        status: 'draft'
+      const application = await LicenseApplication.findOne({
+        where: { id: req.params.id, userId: req.user.id }
       });
+
       if (!application) {
-        res.status(404).json({ message: 'Application not found or cannot be deleted' });
+        res.status(404).json({ message: 'Application not found' });
         return;
       }
+
+      if (application.status !== 'draft') {
+        res.status(400).json({ message: 'Only draft applications can be deleted' });
+        return;
+      }
+
+      await application.destroy();
       res.json({ message: 'Application deleted successfully' });
     } catch (error) {
       res.status(500).json({ message: 'Error deleting application', error });

@@ -1,6 +1,8 @@
 import express from 'express';
-import { License } from '../models/License.js';
+import License from '../models/License.js';
 import { Request } from 'express';
+import { Op } from 'sequelize';
+import { authenticateUser, isAdmin } from '../middleware/auth.js';
 
 interface LicenseQueryParams {
   query?: string;
@@ -21,34 +23,35 @@ router.get('/', async (req: Request<{}, {}, {}, LicenseQueryParams>, res) => {
       sortOrder = 'asc' 
     } = req.query;
     
-    // Build filter object
-    let filter: any = {};
+    // Build where clause
+    const where: any = {};
     
     if (query) {
-      filter.$or = [
-        { name: { $regex: query, $options: 'i' } },
-        { description: { $regex: query, $options: 'i' } }
+      where[Op.or] = [
+        { name: { [Op.iLike]: `%${query}%` } },
+        { description: { [Op.iLike]: `%${query}%` } }
       ];
     }
     
     if (category) {
-      filter.category = category;
+      where.category = category;
     }
     
-    // Build sort object with proper handling of numeric fields
-    const sortOptions: any = {};
-    if (sortBy === 'fee') {
+    // Build order clause
+    const order: any[] = [];
+    if (sortBy === 'fee' || sortBy === 'processingTime') {
       // For numeric fields, use numeric sorting
-      sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
-    } else if (sortBy === 'processingTime') {
-      // For processing time, first sort by the numeric value
-      sortOptions['processingTime'] = sortOrder === 'asc' ? 1 : -1;
+      order.push([sortBy, sortOrder]);
     } else {
       // For string fields, use case-insensitive sorting
-      sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+      order.push([sortBy, sortOrder]);
     }
     
-    const licenses = await License.find(filter).collation({ locale: 'en' }).sort(sortOptions);
+    const licenses = await License.findAll({
+      where,
+      order
+    });
+    
     res.json(licenses);
   } catch (error) {
     console.error('Error fetching licenses:', error);
@@ -59,7 +62,7 @@ router.get('/', async (req: Request<{}, {}, {}, LicenseQueryParams>, res) => {
 // Get license by ID
 router.get('/:id', async (req, res) => {
   try {
-    const license = await License.findById(req.params.id);
+    const license = await License.findByPk(req.params.id);
     if (!license) {
       return res.status(404).json({ message: 'License not found' });
     }
@@ -67,6 +70,26 @@ router.get('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error fetching license:', error);
     res.status(500).json({ message: 'Error fetching license' });
+  }
+});
+
+// Create a new license (admin only)
+router.post('/', authenticateUser, isAdmin, async (req, res) => {
+  try {
+    // Generate a unique license number (simple example)
+    const licenseNumber = 'LIC-' + Date.now();
+    const license = await License.create({
+      ...req.body,
+      licenseNumber,
+      userId: req.user.id, // track which admin created it
+      issueDate: new Date(),
+      expiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+      status: 'active',
+    });
+    res.status(201).json(license);
+  } catch (error) {
+    console.error('Error creating license:', error);
+    res.status(500).json({ message: 'Error creating license', error: error.message });
   }
 });
 

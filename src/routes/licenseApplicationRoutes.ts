@@ -12,6 +12,7 @@ router.get('/all', isAdmin, licenseApplicationController.getAllApplications);
 
 // Create new application
 router.post('/', licenseApplicationController.create);
+router.post('/create', licenseApplicationController.create);
 
 // Get user's applications
 router.get('/user', licenseApplicationController.getUserApplications);
